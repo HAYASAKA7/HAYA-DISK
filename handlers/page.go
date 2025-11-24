@@ -78,14 +78,29 @@ func APIUpdateProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	newUsername := strings.TrimSpace(req.Username)
 	email := strings.TrimSpace(req.Email)
 	phone := strings.TrimSpace(req.Phone)
 
-	// Validation
-	if email == "" && phone == "" {
+	// Validation - at least one field must be provided
+	if newUsername == "" && email == "" && phone == "" {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(models.UpdateProfileResponse{Success: false, Message: "Please provide either email or phone number"})
+		json.NewEncoder(w).Encode(models.UpdateProfileResponse{Success: false, Message: "Please provide at least one field to update"})
 		return
+	}
+
+	// Validate new username if provided
+	if newUsername != "" && newUsername != username {
+		if len(newUsername) < 3 || len(newUsername) > 20 {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(models.UpdateProfileResponse{Success: false, Message: "Username must be 3-20 characters"})
+			return
+		}
+		if services.UsernameExists(newUsername) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(models.UpdateProfileResponse{Success: false, Message: "Username already taken"})
+			return
+		}
 	}
 
 	if email != "" && !utils.IsValidEmail(email) {
@@ -121,13 +136,58 @@ func APIUpdateProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update user profile
-	if err := services.UpdateUserProfile(username, email, phone); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(models.UpdateProfileResponse{Success: false, Message: "Update failed"})
-		return
+	// Update username first if changed
+	updatedUsername := username
+	if newUsername != "" && newUsername != username {
+		if err := services.UpdateUsername(username, newUsername); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(models.UpdateProfileResponse{Success: false, Message: "Failed to update username: " + err.Error()})
+			return
+		}
+		updatedUsername = newUsername
+
+		// Update session with new username
+		middleware.UpdateSession(r, newUsername)
+	}
+
+	// Update user profile (email and phone)
+	if email != "" || phone != "" {
+		if err := services.UpdateUserProfile(updatedUsername, email, phone); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(models.UpdateProfileResponse{Success: false, Message: "Update failed"})
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(models.UpdateProfileResponse{Success: true, Message: "Profile updated successfully"})
+}
+
+// APIGetUserInfoHandler returns the current user's information
+func APIGetUserInfoHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	username := middleware.GetSessionUser(r)
+	if username == "" {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "Unauthorized"})
+		return
+	}
+
+	user := services.GetUser(username)
+	if user == nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "User not found"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(models.UserInfoResponse{
+		Username: user.Username,
+		Email:    user.Email,
+		Phone:    user.Phone,
+	})
 }

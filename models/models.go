@@ -33,12 +33,37 @@ type FileInfo struct {
 
 // UpdateProfileRequest represents a profile update request
 type UpdateProfileRequest struct {
-	Email string `json:"email"`
-	Phone string `json:"phone"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Phone    string `json:"phone"`
 }
 
 // UpdateProfileResponse represents a profile update response
 type UpdateProfileResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
+}
+
+// UserInfoResponse represents user info for the settings modal
+type UserInfoResponse struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Phone    string `json:"phone"`
+}
+
+// FileTypeStats represents storage statistics for a file type
+type FileTypeStats struct {
+	Type       string
+	Size       int64
+	SizeStr    string
+	Count      int
+	Percentage float64
+	Color      string
+}
+
+// StorageStats represents overall storage statistics
+type StorageStats struct {
+	TotalSize    int64
+	TotalSizeStr string
+	FileTypes    []FileTypeStats
 }

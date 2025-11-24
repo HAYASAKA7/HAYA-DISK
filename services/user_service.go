@@ -180,6 +180,57 @@ func UpdateUserProfile(username, email, phone string) error {
 	return nil
 }
 
+// UsernameExists checks if username is already taken
+func UsernameExists(username string) bool {
+	mu.RLock()
+	defer mu.RUnlock()
+	_, exists := users[username]
+	return exists
+}
+
+// UpdateUsername changes a user's username and renames their storage folder
+func UpdateUsername(oldUsername, newUsername string) error {
+	if oldUsername == newUsername {
+		return nil // No change needed
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	// Check if old user exists
+	user, exists := users[oldUsername]
+	if !exists {
+		return fmt.Errorf("user not found")
+	}
+
+	// Check if new username is already taken
+	if _, taken := users[newUsername]; taken {
+		return fmt.Errorf("username already exists")
+	}
+
+	// Rename storage folder
+	oldPath := GetUserStoragePath(oldUsername, user.UniqueCode)
+	newPath := GetUserStoragePath(newUsername, user.UniqueCode)
+
+	if err := os.Rename(oldPath, newPath); err != nil {
+		return fmt.Errorf("failed to rename storage folder: %v", err)
+	}
+
+	// Update username in user object
+	user.Username = newUsername
+
+	// Update in map
+	delete(users, oldUsername)
+	users[newUsername] = user
+
+	// Save to file
+	mu.Unlock()
+	SaveUsers()
+	mu.Lock()
+
+	return nil
+}
+
 // GetUser retrieves a user by username
 func GetUser(username string) *models.User {
 	mu.RLock()

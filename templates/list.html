@@ -21,6 +21,40 @@
             </div>
         </header>
 
+        <!-- Storage Widget -->
+        <div class="storage-widget">
+            <div class="storage-header">
+                <h3>📊 Storage Overview</h3>
+                <span class="total-size">{{.storageStats.TotalSizeStr}}</span>
+            </div>
+            <div class="storage-content">
+                <div class="storage-chart">
+                    <svg id="storageChart" width="200" height="200" viewBox="0 0 200 200">
+                        <circle cx="100" cy="100" r="90" fill="none" stroke="#f0f0f0" stroke-width="20"/>
+                    </svg>
+                    <div class="chart-center">
+                        <div class="chart-total">{{.storageStats.TotalSizeStr}}</div>
+                        <div class="chart-label">Total</div>
+                    </div>
+                </div>
+                <div class="storage-legend">
+                    {{range .storageStats.FileTypes}}
+                    <div class="legend-item" data-type="{{.Type}}" data-size="{{.Size}}" data-percentage="{{.Percentage}}" data-color="{{.Color}}">
+                        <div class="legend-color" style="background-color: {{.Color}}"></div>
+                        <div class="legend-info">
+                            <div class="legend-type">{{.Type}}</div>
+                            <div class="legend-details">
+                                <span class="legend-size">{{.SizeStr}}</span>
+                                <span class="legend-count">({{.Count}} files)</span>
+                            </div>
+                        </div>
+                        <div class="legend-percentage">{{printf "%.1f" .Percentage}}%</div>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+
         <main class="main-content">
             {{if .currentFolder}}
                 <div class="breadcrumb">
@@ -83,7 +117,7 @@
         </main>
 
         <footer class="footer">
-            <p>&copy; 2025 NetDisk. Simple file management system.</p>
+            <p>&copy; 2025 HAYA-DISK. Simple file management system.</p>
         </footer>
     </div>
 
@@ -97,13 +131,21 @@
             <div class="modal-body">
                 <form id="settingsForm">
                     <div class="form-group">
+                        <label for="settingsUsername">Username</label>
+                        <input type="text" id="settingsUsername" placeholder="Enter new username (3-20 characters)">
+                        <small>Current: <strong id="currentUsername"></strong></small>
+                    </div>
+
+                    <div class="form-group">
                         <label for="settingsEmail">Email Address</label>
                         <input type="email" id="settingsEmail" placeholder="your@email.com">
+                        <small>Current: <strong id="currentEmail">Not set</strong></small>
                     </div>
 
                     <div class="form-group">
                         <label for="settingsPhone">Phone Number</label>
                         <input type="tel" id="settingsPhone" placeholder="10-15 digits">
+                        <small>Current: <strong id="currentPhone">Not set</strong></small>
                     </div>
 
                     <div class="form-group info-box">
@@ -176,12 +218,32 @@
     </div>
 
     <script>
-        function openSettingsModal() {
+        async function openSettingsModal() {
             const modal = document.getElementById('settingsModal');
             modal.style.display = 'block';
             
-            // You could fetch current settings here if needed
-            // For now, form will be empty and user can update as needed
+            // Fetch current user information
+            try {
+                const response = await fetch('/api/get-user-info');
+                const data = await response.json();
+                
+                if (!data.error) {
+                    // Display current values
+                    document.getElementById('currentUsername').textContent = data.username || 'N/A';
+                    document.getElementById('currentEmail').textContent = data.email || 'Not set';
+                    document.getElementById('currentPhone').textContent = data.phone || 'Not set';
+                    
+                    // Pre-fill form fields with current values
+                    document.getElementById('settingsUsername').value = '';
+                    document.getElementById('settingsUsername').placeholder = data.username;
+                    document.getElementById('settingsEmail').value = '';
+                    document.getElementById('settingsEmail').placeholder = data.email || 'your@email.com';
+                    document.getElementById('settingsPhone').value = '';
+                    document.getElementById('settingsPhone').placeholder = data.phone || '10-15 digits';
+                }
+            } catch (error) {
+                console.error('Failed to fetch user info:', error);
+            }
         }
 
         function closeSettingsModal() {
@@ -251,9 +313,18 @@
         document.getElementById('settingsForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            const username = document.getElementById('settingsUsername').value.trim();
             const email = document.getElementById('settingsEmail').value.trim();
             const phone = document.getElementById('settingsPhone').value.trim();
             const messageDiv = document.getElementById('settingsMessage');
+
+            // Check if at least one field is filled
+            if (!username && !email && !phone) {
+                messageDiv.style.display = 'block';
+                messageDiv.className = 'settings-message error';
+                messageDiv.textContent = '⚠️ Please fill at least one field to update';
+                return;
+            }
 
             try {
                 const response = await fetch('/api/update-profile', {
@@ -262,6 +333,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        username: username,
                         email: email,
                         phone: phone
                     })
@@ -287,6 +359,74 @@
                 messageDiv.textContent = '⚠️ Error updating profile';
             }
         });
+
+        // Storage Chart Rendering
+        function renderStorageChart() {
+            const chart = document.getElementById('storageChart');
+            if (!chart) return;
+
+            const legendItems = document.querySelectorAll('.legend-item');
+            if (legendItems.length === 0) return;
+
+            const centerX = 100;
+            const centerY = 100;
+            const radius = 90;
+            let currentAngle = -90; // Start from top
+
+            legendItems.forEach((item) => {
+                const percentage = parseFloat(item.dataset.percentage);
+                const color = item.dataset.color;
+
+                if (percentage > 0) {
+                    const angle = (percentage / 100) * 360;
+                    const endAngle = currentAngle + angle;
+
+                    // Create arc path
+                    const path = createArcPath(centerX, centerY, radius, currentAngle, endAngle);
+                    
+                    const pathElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    pathElement.setAttribute('d', path);
+                    pathElement.setAttribute('fill', 'none');
+                    pathElement.setAttribute('stroke', color);
+                    pathElement.setAttribute('stroke-width', '20');
+                    pathElement.style.transition = 'opacity 0.3s';
+                    
+                    chart.appendChild(pathElement);
+
+                    // Add hover effect
+                    item.addEventListener('mouseenter', () => {
+                        pathElement.style.opacity = '0.7';
+                    });
+                    item.addEventListener('mouseleave', () => {
+                        pathElement.style.opacity = '1';
+                    });
+
+                    currentAngle = endAngle;
+                }
+            });
+        }
+
+        function createArcPath(cx, cy, r, startAngle, endAngle) {
+            const start = polarToCartesian(cx, cy, r, endAngle);
+            const end = polarToCartesian(cx, cy, r, startAngle);
+            const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
+
+            return [
+                'M', start.x, start.y,
+                'A', r, r, 0, largeArcFlag, 0, end.x, end.y
+            ].join(' ');
+        }
+
+        function polarToCartesian(cx, cy, r, angleInDegrees) {
+            const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
+            return {
+                x: cx + (r * Math.cos(angleInRadians)),
+                y: cy + (r * Math.sin(angleInRadians))
+            };
+        }
+
+        // Render chart when page loads
+        document.addEventListener('DOMContentLoaded', renderStorageChart);
     </script>
 </body>
 </html>

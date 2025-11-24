@@ -49,7 +49,7 @@
         </main>
 
         <footer class="footer">
-            <p>&copy; 2025 NetDisk. Simple file management system.</p>
+            <p>&copy; 2025 HAYA-DISK. Simple file management system.</p>
         </footer>
     </div>
 
@@ -63,13 +63,21 @@
             <div class="modal-body">
                 <form id="settingsForm">
                     <div class="form-group">
+                        <label for="settingsUsername">Username</label>
+                        <input type="text" id="settingsUsername" placeholder="Enter new username (3-20 characters)">
+                        <small>Current: <strong id="currentUsername"></strong></small>
+                    </div>
+
+                    <div class="form-group">
                         <label for="settingsEmail">Email Address</label>
                         <input type="email" id="settingsEmail" placeholder="your@email.com">
+                        <small>Current: <strong id="currentEmail">Not set</strong></small>
                     </div>
 
                     <div class="form-group">
                         <label for="settingsPhone">Phone Number</label>
                         <input type="tel" id="settingsPhone" placeholder="10-15 digits">
+                        <small>Current: <strong id="currentPhone">Not set</strong></small>
                     </div>
 
                     <div class="form-group info-box">
@@ -88,9 +96,32 @@
     </div>
 
     <script>
-        function openSettingsModal() {
+        async function openSettingsModal() {
             const modal = document.getElementById('settingsModal');
             modal.style.display = 'block';
+            
+            // Fetch current user information
+            try {
+                const response = await fetch('/api/get-user-info');
+                const data = await response.json();
+                
+                if (!data.error) {
+                    // Display current values
+                    document.getElementById('currentUsername').textContent = data.username || 'N/A';
+                    document.getElementById('currentEmail').textContent = data.email || 'Not set';
+                    document.getElementById('currentPhone').textContent = data.phone || 'Not set';
+                    
+                    // Pre-fill form fields with current values
+                    document.getElementById('settingsUsername').value = '';
+                    document.getElementById('settingsUsername').placeholder = data.username;
+                    document.getElementById('settingsEmail').value = '';
+                    document.getElementById('settingsEmail').placeholder = data.email || 'your@email.com';
+                    document.getElementById('settingsPhone').value = '';
+                    document.getElementById('settingsPhone').placeholder = data.phone || '10-15 digits';
+                }
+            } catch (error) {
+                console.error('Failed to fetch user info:', error);
+            }
         }
 
         function closeSettingsModal() {
@@ -112,9 +143,18 @@
         document.getElementById('settingsForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            const username = document.getElementById('settingsUsername').value.trim();
             const email = document.getElementById('settingsEmail').value.trim();
             const phone = document.getElementById('settingsPhone').value.trim();
             const messageDiv = document.getElementById('settingsMessage');
+
+            // Check if at least one field is filled
+            if (!username && !email && !phone) {
+                messageDiv.style.display = 'block';
+                messageDiv.className = 'settings-message error';
+                messageDiv.textContent = '⚠️ Please fill at least one field to update';
+                return;
+            }
 
             try {
                 const response = await fetch('/api/update-profile', {
@@ -123,6 +163,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        username: username,
                         email: email,
                         phone: phone
                     })

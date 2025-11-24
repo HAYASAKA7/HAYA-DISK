@@ -58,3 +58,17 @@ func ClearSessionCookie(w http.ResponseWriter) {
 		HttpOnly: true,
 	})
 }
+
+// UpdateSession updates the username in an existing session
+func UpdateSession(r *http.Request, newUsername string) {
+	sessionID := GetSessionCookie(r)
+	if sessionID == "" {
+		return
+	}
+
+	session := services.GetSession(sessionID)
+	if session != nil {
+		session.Username = newUsername
+		services.CreateSession(sessionID, session)
+	}
+}

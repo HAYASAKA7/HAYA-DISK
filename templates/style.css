@@ -825,3 +825,168 @@ body {
     outline: none;
     border-color: #667eea;
 }
+
+/* Settings Form Current Value Display */
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+    color: #666;
+}
+
+.form-group small strong {
+    color: #667eea;
+    font-weight: 600;
+}
+
+#settingsForm .form-group input {
+    margin-bottom: 5px;
+}
+
+/* Storage Widget */
+.storage-widget {
+    max-width: 600px;
+    margin: 20px 0 20px 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    width: fit-content;
+}
+
+.storage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.storage-header h3 {
+    font-size: 18px;
+    color: #333;
+    margin: 0;
+}
+
+.total-size {
+    font-size: 20px;
+    font-weight: bold;
+    color: #667eea;
+}
+
+.storage-content {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+}
+
+.storage-chart {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.chart-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.chart-total {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+}
+
+.chart-label {
+    font-size: 11px;
+    color: #666;
+    margin-top: 4px;
+}
+
+.storage-legend {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 6px;
+    background: #f9f9f9;
+    transition: background 0.2s;
+}
+
+.legend-item:hover {
+    background: #f0f0f0;
+}
+
+.legend-color {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.legend-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.legend-type {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+}
+
+.legend-details {
+    display: flex;
+    gap: 6px;
+    font-size: 11px;
+    color: #666;
+}
+
+.legend-size {
+    font-weight: 500;
+}
+
+.legend-count {
+    color: #999;
+}
+
+.legend-percentage {
+    font-size: 13px;
+    font-weight: 600;
+    color: #667eea;
+    min-width: 45px;
+    text-align: right;
+}
+
+/* Responsive Storage Widget */
+@media (max-width: 768px) {
+    .storage-widget {
+        margin: 20px;
+        max-width: calc(100% - 40px);
+    }
+
+    .storage-content {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .storage-chart {
+        margin: 0 auto;
+    }
+
+    .storage-legend {
+        width: 100%;
+    }
+}
