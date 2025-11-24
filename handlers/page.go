@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/user/Test1/config"
-	"github.com/user/Test1/middleware"
-	"github.com/user/Test1/models"
-	"github.com/user/Test1/services"
-	"github.com/user/Test1/utils"
+	"github.com/HAYASAKA7/HAYA_DISK/config"
+	"github.com/HAYASAKA7/HAYA_DISK/middleware"
+	"github.com/HAYASAKA7/HAYA_DISK/models"
+	"github.com/HAYASAKA7/HAYA_DISK/services"
+	"github.com/HAYASAKA7/HAYA_DISK/utils"
 )
 
 // IndexHandler redirects to login or list based on session

@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NetDisk - Upload File</title>
+    <title>HAYA-DISK - Upload File</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="container">
         <header class="header">
             <div class="header-content">
-                <h1 class="title">💾 NetDisk</h1>
+                <h1 class="title">💾 HAYA-DISK</h1>
                 <div class="header-actions">
                     <span class="user-info">👤 {{.username}}</span>
                     <a href="/list" class="back-link">← Back to Files</a>
@@ -24,11 +24,21 @@
             <div class="upload-container">
                 <h2>Upload File</h2>
                 <form action="/upload" method="post" enctype="multipart/form-data" class="upload-form">
+                    <div class="form-group">
+                        <label for="folderSelect">Upload to Folder</label>
+                        <select id="folderSelect" name="folder" class="folder-select">
+                            <option value="/">Root Folder</option>
+                            {{range .folders}}
+                                <option value="{{.}}">{{.}}</option>
+                            {{end}}
+                        </select>
+                    </div>
+                    
                     <div class="drop-zone" id="dropZone">
                         <div class="drop-icon">📤</div>
                         <p class="drop-text">Drag and drop your file here</p>
                         <p class="drop-hint">or click to select</p>
-                        <input type="file" name="file" id="fileInput" required class="file-input">
+                        <input type="file" name="file" id="fileInput" required class="file-input" title="Select a file to upload" placeholder="Choose file">
                     </div>
                     <div class="file-selected" id="fileSelected">
                         <p>📁 Selected: <strong id="fileName"></strong></p>
@@ -182,6 +192,19 @@
                 fileSelected.style.display = 'block';
             } else {
                 fileSelected.style.display = 'none';
+            }
+        }
+
+        // Pre-select folder if coming from a folder view
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentFolder = urlParams.get('folder');
+        if (currentFolder) {
+            const folderSelect = document.getElementById('folderSelect');
+            for (let option of folderSelect.options) {
+                if (option.value === currentFolder) {
+                    option.selected = true;
+                    break;
+                }
             }
         }
     </script>

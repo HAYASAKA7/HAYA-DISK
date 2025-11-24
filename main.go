@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/user/Test1/config"
-	"github.com/user/Test1/handlers"
-	"github.com/user/Test1/services"
+	"github.com/HAYASAKA7/HAYA_DISK/config"
+	"github.com/HAYASAKA7/HAYA_DISK/handlers"
+	"github.com/HAYASAKA7/HAYA_DISK/services"
 )
 
 func main() {
@@ -26,6 +26,9 @@ func main() {
 	http.HandleFunc("/list", handlers.ListHandler)
 	http.HandleFunc("/upload", handlers.UploadHandler)
 	http.HandleFunc("/download", handlers.DownloadHandler)
+	http.HandleFunc("/delete", handlers.DeleteHandler)
+	http.HandleFunc("/create-folder", handlers.CreateFolderHandler)
+	http.HandleFunc("/move-file", handlers.MoveFileHandler)
 	http.HandleFunc("/thumbnail", handlers.ThumbnailHandler)
 	http.HandleFunc("/settings", handlers.SettingsHandler)
 	http.HandleFunc("/api/update-profile", handlers.APIUpdateProfileHandler)

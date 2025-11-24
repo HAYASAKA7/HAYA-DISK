@@ -720,3 +720,108 @@ body {
         flex-wrap: wrap;
     }
 }
+
+/* Breadcrumb Navigation */
+.breadcrumb {
+    padding: 15px 20px;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.breadcrumb a {
+    color: #667eea;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.breadcrumb a:hover {
+    color: #764ba2;
+    text-decoration: underline;
+}
+
+.breadcrumb span {
+    color: #666;
+}
+
+/* Folder Link */
+.folder-link {
+    text-decoration: none;
+    display: block;
+}
+
+.file-name a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.file-name a:hover {
+    color: #667eea;
+}
+
+/* Button Styles for Delete and Move */
+.btn-delete {
+    background: #dc3545;
+    color: white;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.3s;
+}
+
+.btn-delete:hover {
+    background: #c82333;
+}
+
+.btn-move {
+    background: #ffc107;
+    color: #333;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.3s;
+    margin-right: 5px;
+}
+
+.btn-move:hover {
+    background: #e0a800;
+}
+
+/* Folder Select in Upload Form */
+.folder-select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    background: white;
+    transition: border-color 0.3s;
+    margin-bottom: 20px;
+}
+
+.folder-select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+/* Additional Modal Styling */
+#createFolderModal .form-group input,
+#moveFileModal .form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+#createFolderModal .form-group input:focus,
+#moveFileModal .form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+}

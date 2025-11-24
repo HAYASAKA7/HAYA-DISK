@@ -19,7 +19,7 @@ type Session struct {
 	Timestamp time.Time
 }
 
-// FileInfo contains metadata about a file
+// FileInfo contains metadata about a file or folder
 type FileInfo struct {
 	Name     string
 	Size     string
@@ -27,6 +27,8 @@ type FileInfo struct {
 	Icon     string
 	IsImage  bool
 	Ext      string
+	IsDir    bool
+	Path     string
 }
 
 // UpdateProfileRequest represents a profile update request

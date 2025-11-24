@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NetDisk - File Management</title>
+    <title>HAYA-DISK - File Management</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="container">
         <header class="header">
             <div class="header-content">
-                <h1 class="title">💾 NetDisk</h1>
+                <h1 class="title">💾 HAYA-DISK</h1>
                 <div class="header-actions">
                     <span class="user-info">👤 {{.username}}</span>
-                    <a href="/upload" class="upload-btn">+ Upload File</a>
+                    <button type="button" class="upload-btn" onclick="openCreateFolderModal()">+ New Folder</button>
+                    <a href="/upload{{if .currentFolder}}?folder={{.currentFolder}}{{end}}" class="upload-btn">+ Upload File</a>
                     <button type="button" class="settings-btn" onclick="openSettingsModal()">⚙️ Settings</button>
                     <a href="/logout" class="logout-btn">Logout</a>
                 </div>
@@ -21,28 +22,52 @@
         </header>
 
         <main class="main-content">
+            {{if .currentFolder}}
+                <div class="breadcrumb">
+                    <a href="/list">🏠 Home</a>
+                    <span> / </span>
+                    <span>📁 {{.currentFolder}}</span>
+                </div>
+            {{end}}
+            
             {{if .files}}
                 <div class="file-stats">
-                    <p>Total files: <strong>{{len .files}}</strong></p>
+                    <p>Total items: <strong>{{len .files}}</strong></p>
                 </div>
                 <div class="file-grid">
                 {{range .files}}
                     <div class="file-card">
                         <div class="file-preview">
-                            {{if .IsImage}}
-                                <img src="/thumbnail?name={{.Name}}" alt="{{.Name}}" class="file-thumbnail">
+                            {{if .IsDir}}
+                                <a href="/list?folder={{.Path}}" class="folder-link">
+                                    <div class="file-icon-box">{{.Icon}}</div>
+                                </a>
+                            {{else if .IsImage}}
+                                <img src="/thumbnail?name={{.Name}}{{if $.currentFolder}}&folder={{$.currentFolder}}{{end}}" alt="{{.Name}}" class="file-thumbnail">
                             {{else}}
                                 <div class="file-icon-box">{{.Icon}}</div>
                             {{end}}
                         </div>
                         <div class="file-info">
-                            <h3 class="file-name" title="{{.Name}}">{{.Name}}</h3>
+                            <h3 class="file-name" title="{{.Name}}">
+                                {{if .IsDir}}
+                                    <a href="/list?folder={{.Path}}">{{.Name}}</a>
+                                {{else}}
+                                    {{.Name}}
+                                {{end}}
+                            </h3>
                             <div class="file-meta">
                                 <span class="file-size">📦 {{.Size}}</span>
                                 <span class="file-date">📅 {{.Modified}}</span>
                             </div>
                             <div class="file-actions">
-                                <a href="/download?name={{.Name}}" class="btn btn-download">Download</a>
+                                {{if .IsDir}}
+                                    <button onclick="confirmDelete('{{.Name}}', true)" class="btn btn-delete">Delete</button>
+                                {{else}}
+                                    <a href="/download?name={{.Name}}{{if $.currentFolder}}&folder={{$.currentFolder}}{{end}}" class="btn btn-download">Download</a>
+                                    <button onclick="openMoveModal('{{.Name}}')" class="btn btn-move">Move</button>
+                                    <button onclick="confirmDelete('{{.Name}}', false)" class="btn btn-delete">Delete</button>
+                                {{end}}
                             </div>
                         </div>
                     </div>
@@ -52,7 +77,7 @@
                 <div class="empty-state">
                     <div class="empty-icon">📁</div>
                     <p>No files yet</p>
-                    <a href="/upload" class="btn btn-primary">Upload your first file</a>
+                    <a href="/upload{{if .currentFolder}}?folder={{.currentFolder}}{{end}}" class="btn btn-primary">Upload your first file</a>
                 </div>
             {{end}}
         </main>
@@ -96,6 +121,60 @@
         </div>
     </div>
 
+    <!-- Create Folder Modal -->
+    <div id="createFolderModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Folder</h2>
+                <button type="button" class="modal-close" onclick="closeCreateFolderModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createFolderForm" method="post" action="/create-folder">
+                    <input type="hidden" name="current_folder" value="{{.currentFolder}}">
+                    <div class="form-group">
+                        <label for="folderName">Folder Name</label>
+                        <input type="text" id="folderName" name="folder_name" placeholder="Enter folder name" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">Create Folder</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeCreateFolderModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Move File Modal -->
+    <div id="moveFileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Move File</h2>
+                <button type="button" class="modal-close" onclick="closeMoveModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="moveFileForm" method="post" action="/move-file">
+                    <input type="hidden" name="file_name" id="moveFileName">
+                    <input type="hidden" name="source_folder" value="{{.currentFolder}}">
+                    <div class="form-group">
+                        <label for="targetFolder">Move to Folder</label>
+                        <select id="targetFolder" name="target_folder" required>
+                            <option value="/">Root Folder</option>
+                            {{range .allFolders}}
+                                {{if ne . "/"}}
+                                    <option value="{{.}}">{{.}}</option>
+                                {{end}}
+                            {{end}}
+                        </select>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">Move File</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeMoveModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
         function openSettingsModal() {
             const modal = document.getElementById('settingsModal');
@@ -112,11 +191,59 @@
             document.getElementById('settingsMessage').style.display = 'none';
         }
 
+        function openCreateFolderModal() {
+            const modal = document.getElementById('createFolderModal');
+            modal.style.display = 'block';
+        }
+
+        function closeCreateFolderModal() {
+            const modal = document.getElementById('createFolderModal');
+            modal.style.display = 'none';
+            document.getElementById('createFolderForm').reset();
+        }
+
+        function openMoveModal(fileName) {
+            document.getElementById('moveFileName').value = fileName;
+            const modal = document.getElementById('moveFileModal');
+            modal.style.display = 'block';
+        }
+
+        function closeMoveModal() {
+            const modal = document.getElementById('moveFileModal');
+            modal.style.display = 'none';
+            document.getElementById('moveFileForm').reset();
+        }
+
+        function confirmDelete(name, isFolder) {
+            const itemType = isFolder ? 'folder' : 'file';
+            const message = isFolder 
+                ? `Are you sure you want to delete the folder "${name}" and all its contents?`
+                : `Are you sure you want to delete "${name}"?`;
+            
+            if (confirm(message)) {
+                const currentFolder = "{{.currentFolder}}";
+                let url = `/delete?name=${encodeURIComponent(name)}`;
+                if (currentFolder) {
+                    url += `&folder=${encodeURIComponent(currentFolder)}`;
+                }
+                window.location.href = url;
+            }
+        }
+
         // Close modal when clicking outside
         window.onclick = function(event) {
-            const modal = document.getElementById('settingsModal');
-            if (event.target == modal) {
+            const settingsModal = document.getElementById('settingsModal');
+            const createFolderModal = document.getElementById('createFolderModal');
+            const moveFileModal = document.getElementById('moveFileModal');
+            
+            if (event.target == settingsModal) {
                 closeSettingsModal();
+            }
+            if (event.target == createFolderModal) {
+                closeCreateFolderModal();
+            }
+            if (event.target == moveFileModal) {
+                closeMoveModal();
             }
         }
 
