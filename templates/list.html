@@ -21,35 +21,65 @@
             </div>
         </header>
 
-        <!-- Storage Widget -->
-        <div class="storage-widget">
-            <div class="storage-header">
-                <h3>📊 Storage Overview</h3>
-                <span class="total-size">{{.storageStats.TotalSizeStr}}</span>
-            </div>
-            <div class="storage-content">
-                <div class="storage-chart">
-                    <svg id="storageChart" width="200" height="200" viewBox="0 0 200 200">
-                        <circle cx="100" cy="100" r="90" fill="none" stroke="#f0f0f0" stroke-width="20"/>
-                    </svg>
-                    <div class="chart-center">
-                        <div class="chart-total">{{.storageStats.TotalSizeStr}}</div>
-                        <div class="chart-label">Total</div>
+        <!-- Widgets Container -->
+        <div class="widgets-container">
+            <!-- Storage Widget -->
+            <div class="storage-widget">
+                <div class="storage-header">
+                    <h3>📊 Storage Overview</h3>
+                    <span class="total-size">{{.storageStats.TotalSizeStr}}</span>
+                </div>
+                <div class="storage-content">
+                    <div class="storage-chart">
+                        <svg id="storageChart" width="200" height="200" viewBox="0 0 200 200">
+                            <circle cx="100" cy="100" r="90" fill="none" stroke="#f0f0f0" stroke-width="20"/>
+                        </svg>
+                        <div class="chart-center">
+                            <div class="chart-total">{{.storageStats.TotalSizeStr}}</div>
+                            <div class="chart-label">Total</div>
+                        </div>
+                    </div>
+                    <div class="storage-legend">
+                        {{range .storageStats.FileTypes}}
+                        <div class="legend-item" data-type="{{.Type}}" data-size="{{.Size}}" data-percentage="{{.Percentage}}" data-color="{{.Color}}">
+                            <div class="legend-color" style="background-color: {{.Color}}"></div>
+                            <div class="legend-info">
+                                <div class="legend-type">{{.Type}}</div>
+                                <div class="legend-details">
+                                    <span class="legend-size">{{.SizeStr}}</span>
+                                    <span class="legend-count">({{.Count}} files)</span>
+                                </div>
+                            </div>
+                            <div class="legend-percentage">{{printf "%.1f" .Percentage}}%</div>
+                        </div>
+                        {{end}}
                     </div>
                 </div>
-                <div class="storage-legend">
-                    {{range .storageStats.FileTypes}}
-                    <div class="legend-item" data-type="{{.Type}}" data-size="{{.Size}}" data-percentage="{{.Percentage}}" data-color="{{.Color}}">
-                        <div class="legend-color" style="background-color: {{.Color}}"></div>
-                        <div class="legend-info">
-                            <div class="legend-type">{{.Type}}</div>
-                            <div class="legend-details">
-                                <span class="legend-size">{{.SizeStr}}</span>
-                                <span class="legend-count">({{.Count}} files)</span>
+            </div>
+
+            <!-- Recent Uploads Widget -->
+            <div class="recent-widget">
+                <div class="recent-header">
+                    <h3>🕒 Recent Uploads</h3>
+                    <span class="recent-count">Last 5 files</span>
+                </div>
+                <div class="recent-content">
+                    {{if .recentFiles}}
+                        {{range .recentFiles}}
+                        <div class="recent-file-item">
+                            <div class="recent-file-icon">{{.Icon}}</div>
+                            <div class="recent-file-info">
+                                <div class="recent-file-name" title="{{.Name}}">{{.Name}}</div>
+                                <div class="recent-file-path" title="{{.Path}}">📁 {{.Path}}</div>
                             </div>
+                            <div class="recent-file-size">{{.Size}}</div>
                         </div>
-                        <div class="legend-percentage">{{printf "%.1f" .Percentage}}%</div>
-                    </div>
+                        {{end}}
+                    {{else}}
+                        <div class="recent-empty">
+                            <div class="recent-empty-icon">📭</div>
+                            <p>No files uploaded yet</p>
+                        </div>
                     {{end}}
                 </div>
             </div>

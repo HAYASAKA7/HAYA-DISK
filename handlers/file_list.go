@@ -41,7 +41,7 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 		absPath, _ := filepath.Abs(targetPath)
 		absAllowed, _ := filepath.Abs(userStoragePath)
 		if !strings.HasPrefix(absPath, absAllowed) {
-			http.Error(w, "Unauthorized", 403)
+			http.Error(w, "Unauthorized", http.StatusForbidden)
 			return
 		}
 	} else {
@@ -61,12 +61,16 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 	// Calculate storage statistics
 	storageStats := calculateStorageStats(userStoragePath)
 
+	// Get recent files
+	recentFiles := getRecentFiles(userStoragePath)
+
 	data := map[string]interface{}{
 		"files":         files,
 		"username":      username,
 		"currentFolder": currentFolder,
 		"allFolders":    allFolders,
 		"storageStats":  storageStats,
+		"recentFiles":   recentFiles,
 	}
 
 	tmpl, err := template.ParseFiles(filepath.Join(config.TemplatesDir, "list.html"))
@@ -257,4 +261,69 @@ func categorizeFile(ext string) string {
 		return "Code"
 	}
 	return "Others"
+}
+
+// getRecentFiles retrieves the 5 most recently modified files
+func getRecentFiles(basePath string) []models.RecentFile {
+	type fileWithTime struct {
+		name    string
+		path    string
+		modTime int64
+		size    int64
+		isImage bool
+		ext     string
+	}
+
+	var allFiles []fileWithTime
+
+	// Walk through all files recursively
+	filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+
+		// Get relative path from base
+		relPath, _ := filepath.Rel(basePath, path)
+		ext := strings.ToLower(filepath.Ext(info.Name()))
+
+		allFiles = append(allFiles, fileWithTime{
+			name:    info.Name(),
+			path:    filepath.ToSlash(relPath),
+			modTime: info.ModTime().Unix(),
+			size:    info.Size(),
+			isImage: utils.IsImageFile(ext),
+			ext:     ext,
+		})
+
+		return nil
+	})
+
+	// Sort by modification time (newest first)
+	for i := 0; i < len(allFiles)-1; i++ {
+		for j := i + 1; j < len(allFiles); j++ {
+			if allFiles[j].modTime > allFiles[i].modTime {
+				allFiles[i], allFiles[j] = allFiles[j], allFiles[i]
+			}
+		}
+	}
+
+	// Take top 5
+	var recentFiles []models.RecentFile
+	count := 5
+	if len(allFiles) < count {
+		count = len(allFiles)
+	}
+
+	for i := 0; i < count; i++ {
+		f := allFiles[i]
+		recentFiles = append(recentFiles, models.RecentFile{
+			Name:    f.name,
+			Path:    f.path,
+			Icon:    utils.GetFileIcon(f.ext),
+			Size:    utils.FormatFileSize(f.size),
+			IsImage: f.isImage,
+		})
+	}
+
+	return recentFiles
 }

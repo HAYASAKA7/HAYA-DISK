@@ -67,3 +67,13 @@ type StorageStats struct {
 	TotalSizeStr string
 	FileTypes    []FileTypeStats
 }
+
+// RecentFile represents a recently uploaded file
+type RecentFile struct {
+	Name     string
+	Path     string
+	Icon     string
+	Size     string
+	Modified string
+	IsImage  bool
+}
