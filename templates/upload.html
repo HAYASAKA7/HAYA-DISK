@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetDisk - Upload File</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">💾 NetDisk</h1>
+                <div class="header-actions">
+                    <span class="user-info">👤 {{.username}}</span>
+                    <a href="/list" class="back-link">← Back to Files</a>
+                    <button type="button" class="settings-btn" onclick="openSettingsModal()">⚙️ Settings</button>
+                    <a href="/logout" class="logout-btn">Logout</a>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="upload-container">
+                <h2>Upload File</h2>
+                <form action="/upload" method="post" enctype="multipart/form-data" class="upload-form">
+                    <div class="drop-zone" id="dropZone">
+                        <div class="drop-icon">📤</div>
+                        <p class="drop-text">Drag and drop your file here</p>
+                        <p class="drop-hint">or click to select</p>
+                        <input type="file" name="file" id="fileInput" required class="file-input">
+                    </div>
+                    <div class="file-selected" id="fileSelected">
+                        <p>📁 Selected: <strong id="fileName"></strong></p>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-large">Upload File</button>
+                </form>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2025 NetDisk. Simple file management system.</p>
+        </footer>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Profile Settings</h2>
+                <button type="button" class="modal-close" onclick="closeSettingsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="settingsForm">
+                    <div class="form-group">
+                        <label for="settingsEmail">Email Address</label>
+                        <input type="email" id="settingsEmail" placeholder="your@email.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="settingsPhone">Phone Number</label>
+                        <input type="tel" id="settingsPhone" placeholder="10-15 digits">
+                    </div>
+
+                    <div class="form-group info-box">
+                        <p>⚠️ You can use either email or phone to login. If you set both, you can use either one.</p>
+                    </div>
+
+                    <div id="settingsMessage" class="settings-message"></div>
+
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            modal.style.display = 'block';
+        }
+
+        function closeSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            modal.style.display = 'none';
+            document.getElementById('settingsForm').reset();
+            document.getElementById('settingsMessage').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('settingsModal');
+            if (event.target == modal) {
+                closeSettingsModal();
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('settingsEmail').value.trim();
+            const phone = document.getElementById('settingsPhone').value.trim();
+            const messageDiv = document.getElementById('settingsMessage');
+
+            try {
+                const response = await fetch('/api/update-profile', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        phone: phone
+                    })
+                });
+
+                const data = await response.json();
+                messageDiv.style.display = 'block';
+                
+                if (data.success) {
+                    messageDiv.className = 'settings-message success';
+                    messageDiv.textContent = '✅ ' + data.message;
+                    setTimeout(() => {
+                        closeSettingsModal();
+                        location.reload();
+                    }, 1500);
+                } else {
+                    messageDiv.className = 'settings-message error';
+                    messageDiv.textContent = '⚠️ ' + data.message;
+                }
+            } catch (error) {
+                messageDiv.style.display = 'block';
+                messageDiv.className = 'settings-message error';
+                messageDiv.textContent = '⚠️ Error updating profile';
+            }
+        });
+
+        // Drag and drop functionality
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileSelected = document.getElementById('fileSelected');
+        const fileName = document.getElementById('fileName');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.add('highlight');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.remove('highlight');
+            });
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            fileInput.files = files;
+            updateFileSelected();
+        });
+
+        fileInput.addEventListener('change', updateFileSelected);
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        function updateFileSelected() {
+            if (fileInput.files.length > 0) {
+                fileName.textContent = fileInput.files[0].name;
+                fileSelected.style.display = 'block';
+            } else {
+                fileSelected.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

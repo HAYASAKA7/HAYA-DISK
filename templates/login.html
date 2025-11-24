@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetDisk - Login</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box">
+            <div class="auth-header">
+                <h1>💾 NetDisk</h1>
+                <p>Login to your account</p>
+            </div>
+
+            {{if .error}}
+                <div class="error-message">
+                    <p>⚠️ {{.error}}</p>
+                </div>
+            {{end}}
+
+            <form class="auth-form" method="POST">
+                <div class="form-group">
+                    <label for="credential">Username, Email, or Phone</label>
+                    <input type="text" id="credential" name="credential" required placeholder="Enter your username, email, or phone">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="Enter your password">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-large">Login</button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Don't have an account? <a href="/register">Register here</a></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

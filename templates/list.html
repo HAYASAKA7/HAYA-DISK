@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetDisk - File Management</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">💾 NetDisk</h1>
+                <div class="header-actions">
+                    <span class="user-info">👤 {{.username}}</span>
+                    <a href="/upload" class="upload-btn">+ Upload File</a>
+                    <button type="button" class="settings-btn" onclick="openSettingsModal()">⚙️ Settings</button>
+                    <a href="/logout" class="logout-btn">Logout</a>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            {{if .files}}
+                <div class="file-stats">
+                    <p>Total files: <strong>{{len .files}}</strong></p>
+                </div>
+                <div class="file-grid">
+                {{range .files}}
+                    <div class="file-card">
+                        <div class="file-preview">
+                            {{if .IsImage}}
+                                <img src="/thumbnail?name={{.Name}}" alt="{{.Name}}" class="file-thumbnail">
+                            {{else}}
+                                <div class="file-icon-box">{{.Icon}}</div>
+                            {{end}}
+                        </div>
+                        <div class="file-info">
+                            <h3 class="file-name" title="{{.Name}}">{{.Name}}</h3>
+                            <div class="file-meta">
+                                <span class="file-size">📦 {{.Size}}</span>
+                                <span class="file-date">📅 {{.Modified}}</span>
+                            </div>
+                            <div class="file-actions">
+                                <a href="/download?name={{.Name}}" class="btn btn-download">Download</a>
+                            </div>
+                        </div>
+                    </div>
+                {{end}}
+                </div>
+            {{else}}
+                <div class="empty-state">
+                    <div class="empty-icon">📁</div>
+                    <p>No files yet</p>
+                    <a href="/upload" class="btn btn-primary">Upload your first file</a>
+                </div>
+            {{end}}
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2025 NetDisk. Simple file management system.</p>
+        </footer>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Profile Settings</h2>
+                <button type="button" class="modal-close" onclick="closeSettingsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="settingsForm">
+                    <div class="form-group">
+                        <label for="settingsEmail">Email Address</label>
+                        <input type="email" id="settingsEmail" placeholder="your@email.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="settingsPhone">Phone Number</label>
+                        <input type="tel" id="settingsPhone" placeholder="10-15 digits">
+                    </div>
+
+                    <div class="form-group info-box">
+                        <p>⚠️ You can use either email or phone to login. If you set both, you can use either one.</p>
+                    </div>
+
+                    <div id="settingsMessage" class="settings-message"></div>
+
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            modal.style.display = 'block';
+            
+            // You could fetch current settings here if needed
+            // For now, form will be empty and user can update as needed
+        }
+
+        function closeSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            modal.style.display = 'none';
+            document.getElementById('settingsForm').reset();
+            document.getElementById('settingsMessage').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('settingsModal');
+            if (event.target == modal) {
+                closeSettingsModal();
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('settingsEmail').value.trim();
+            const phone = document.getElementById('settingsPhone').value.trim();
+            const messageDiv = document.getElementById('settingsMessage');
+
+            try {
+                const response = await fetch('/api/update-profile', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        phone: phone
+                    })
+                });
+
+                const data = await response.json();
+                messageDiv.style.display = 'block';
+                
+                if (data.success) {
+                    messageDiv.className = 'settings-message success';
+                    messageDiv.textContent = '✅ ' + data.message;
+                    setTimeout(() => {
+                        closeSettingsModal();
+                        location.reload();
+                    }, 1500);
+                } else {
+                    messageDiv.className = 'settings-message error';
+                    messageDiv.textContent = '⚠️ ' + data.message;
+                }
+            } catch (error) {
+                messageDiv.style.display = 'block';
+                messageDiv.className = 'settings-message error';
+                messageDiv.textContent = '⚠️ Error updating profile';
+            }
+        });
+    </script>
+</body>
+</html>
