@@ -75,6 +75,17 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		filePath := filepath.Join(targetPath, header.Filename)
+
+		// LOCK before file operations
+		services.LockUserFileWrite(username)
+		defer services.UnlockUserFileWrite(username)
+
+		// Check if file already exists
+		if _, err := os.Stat(filePath); err == nil {
+			http.Error(w, "File already exists", http.StatusConflict)
+			return
+		}
+
 		f, err := os.Create(filePath)
 		if err != nil {
 			http.Error(w, "Save error", 500)
@@ -82,6 +93,9 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		defer f.Close()
 		io.Copy(f, file)
+
+		// Invalidate cache after upload
+		services.InvalidateUserCache(username)
 
 		// Redirect back to the folder where the file was uploaded
 		if folder != "" && folder != "/" {
@@ -99,6 +113,10 @@ func DownloadHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
+
+	// Lock for read operation
+	services.LockUserFileRead(username)
+	defer services.UnlockUserFileRead(username)
 
 	name := r.URL.Query().Get("name")
 	folder := r.URL.Query().Get("folder")
@@ -147,6 +165,10 @@ func ThumbnailHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
+
+	// Lock for read operation
+	services.LockUserFileRead(username)
+	defer services.UnlockUserFileRead(username)
 
 	name := r.URL.Query().Get("name")
 	folder := r.URL.Query().Get("folder")
@@ -238,12 +260,19 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Lock for write operation
+	services.LockUserFileWrite(username)
+	defer services.UnlockUserFileWrite(username)
+
 	// Delete file or folder
 	err := os.RemoveAll(targetPath)
 	if err != nil {
 		http.Error(w, "Delete error", 500)
 		return
 	}
+
+	// Invalidate cache after deletion
+	services.InvalidateUserCache(username)
 
 	// Redirect back to folder or root
 	if folder != "" && folder != "/" {
@@ -303,12 +332,19 @@ func CreateFolderHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Lock for write operation
+	services.LockUserFileWrite(username)
+	defer services.UnlockUserFileWrite(username)
+
 	// Create folder
 	err := os.MkdirAll(targetPath, os.ModePerm)
 	if err != nil {
 		http.Error(w, "Failed to create folder", 500)
 		return
 	}
+
+	// Invalidate cache after folder creation
+	services.InvalidateUserCache(username)
 
 	// Redirect back
 	if currentFolder != "" && currentFolder != "/" {
@@ -370,12 +406,19 @@ func MoveFileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Lock for write operation
+	services.LockUserFileWrite(username)
+	defer services.UnlockUserFileWrite(username)
+
 	// Move file
 	err := os.Rename(sourcePath, targetPath)
 	if err != nil {
 		http.Error(w, "Failed to move file", 500)
 		return
 	}
+
+	// Invalidate cache after moving file
+	services.InvalidateUserCache(username)
 
 	// Redirect back
 	if sourceFolder != "" && sourceFolder != "/" {

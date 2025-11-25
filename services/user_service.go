@@ -41,7 +41,8 @@ func SaveUsers() {
 	mu.RLock()
 	var userList []*models.User
 	for _, user := range users {
-		userList = append(userList, user)
+		userCopy := *user // Create a copy to avoid race conditions
+		userList = append(userList, &userCopy)
 	}
 	mu.RUnlock()
 
@@ -49,7 +50,13 @@ func SaveUsers() {
 	if err != nil {
 		return
 	}
-	os.WriteFile(config.UsersFile, data, 0644)
+
+	// Write to temp file first, then atomic rename
+	tempFile := config.UsersFile + ".tmp"
+	if err := os.WriteFile(tempFile, data, 0644); err != nil {
+		return
+	}
+	os.Rename(tempFile, config.UsersFile)
 }
 
 // GenerateUniqueCode generates a random unique code

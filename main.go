@@ -7,6 +7,7 @@ import (
 
 	"github.com/HAYASAKA7/HAYA_DISK/config"
 	"github.com/HAYASAKA7/HAYA_DISK/handlers"
+	"github.com/HAYASAKA7/HAYA_DISK/middleware"
 	"github.com/HAYASAKA7/HAYA_DISK/services"
 )
 
@@ -24,7 +25,7 @@ func main() {
 	http.HandleFunc("/register", handlers.RegisterHandler)
 	http.HandleFunc("/logout", handlers.LogoutHandler)
 	http.HandleFunc("/list", handlers.ListHandler)
-	http.HandleFunc("/upload", handlers.UploadHandler)
+	http.HandleFunc("/upload", middleware.RateLimitMiddleware(handlers.UploadHandler))
 	http.HandleFunc("/download", handlers.DownloadHandler)
 	http.HandleFunc("/delete", handlers.DeleteHandler)
 	http.HandleFunc("/create-folder", handlers.CreateFolderHandler)
