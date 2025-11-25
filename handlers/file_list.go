@@ -314,12 +314,21 @@ func getRecentFiles(basePath string) []models.RecentFile {
 
 	for i := 0; i < count; i++ {
 		f := allFiles[i]
+
+		// Extract folder path (directory containing the file)
+		folderPath := filepath.Dir(f.path)
+		if folderPath == "." {
+			folderPath = "" // Root folder
+		}
+		folderPath = filepath.ToSlash(folderPath)
+
 		recentFiles = append(recentFiles, models.RecentFile{
-			Name:    f.name,
-			Path:    f.path,
-			Icon:    utils.GetFileIcon(f.ext),
-			Size:    utils.FormatFileSize(f.size),
-			IsImage: f.isImage,
+			Name:       f.name,
+			Path:       f.path,
+			FolderPath: folderPath,
+			Icon:       utils.GetFileIcon(f.ext),
+			Size:       utils.FormatFileSize(f.size),
+			IsImage:    f.isImage,
 		})
 	}
 

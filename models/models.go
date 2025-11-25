@@ -70,10 +70,11 @@ type StorageStats struct {
 
 // RecentFile represents a recently uploaded file
 type RecentFile struct {
-	Name     string
-	Path     string
-	Icon     string
-	Size     string
-	Modified string
-	IsImage  bool
+	Name       string
+	Path       string
+	FolderPath string // The folder containing the file (empty for root)
+	Icon       string
+	Size       string
+	Modified   string
+	IsImage    bool
 }

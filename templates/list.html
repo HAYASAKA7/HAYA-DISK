@@ -78,14 +78,14 @@
                 <div class="recent-content">
                     {{if .recentFiles}}
                         {{range .recentFiles}}
-                        <div class="recent-file-item">
+                        <a href="/list{{if .FolderPath}}?folder={{.FolderPath}}{{end}}#{{.Name}}" class="recent-file-item" data-is-root="{{if not .FolderPath}}true{{else}}false{{end}}" data-file-name="{{.Name}}">
                             <div class="recent-file-icon">{{.Icon}}</div>
                             <div class="recent-file-info">
                                 <div class="recent-file-name" title="{{.Name}}">{{.Name}}</div>
                                 <div class="recent-file-path" title="{{.Path}}">📁 {{.Path}}</div>
                             </div>
                             <div class="recent-file-size">{{.Size}}</div>
-                        </div>
+                        </a>
                         {{end}}
                     {{else}}
                         <div class="recent-empty">
@@ -113,7 +113,7 @@
                 </div>
                 <div class="file-grid">
                 {{range .files}}
-                    <div class="file-card">
+                    <div class="file-card" data-file-name="{{.Name}}">
                         <div class="file-preview">
                             {{if .IsDir}}
                                 <a href="/list?folder={{.Path}}" class="folder-link">
@@ -503,8 +503,73 @@
             }
         });
 
+        // Scroll to file card if hash is present in URL AND it was clicked from recent uploads
+        function scrollToFileCard() {
+            if (window.location.hash) {
+                // Check if this navigation came from a recent file click
+                const shouldScroll = sessionStorage.getItem('scrollToFile');
+                if (shouldScroll === 'true') {
+                    const fileName = decodeURIComponent(window.location.hash.substring(1));
+                    const fileCard = document.querySelector(`.file-card[data-file-name="${fileName}"]`);
+                    if (fileCard) {
+                        // Wait a bit for the page to fully render
+                        setTimeout(() => {
+                            fileCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            // Add a highly visible highlight effect
+                            fileCard.style.outline = '5px solid #667eea';
+                            fileCard.style.outlineOffset = '6px';
+                            fileCard.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.6), 0 8px 24px rgba(102, 126, 234, 0.3)';
+                            fileCard.style.transform = 'scale(1.02)';
+                            fileCard.style.transition = 'all 0.3s ease';
+                            setTimeout(() => {
+                                fileCard.style.outline = '';
+                                fileCard.style.outlineOffset = '';
+                                fileCard.style.boxShadow = '';
+                                fileCard.style.transform = '';
+                            }, 3000);
+                        }, 300);
+                    }
+                    // Clear the flag and remove hash from URL after scrolling
+                    sessionStorage.removeItem('scrollToFile');
+                    setTimeout(() => {
+                        history.replaceState(null, null, window.location.pathname + window.location.search);
+                    }, 500);
+                }
+            }
+        }
+
+        // Handle clicks on recent file items
+        function handleRecentFileClick(event) {
+            const recentItem = event.currentTarget;
+            const isRoot = recentItem.getAttribute('data-is-root') === 'true';
+            const fileName = recentItem.getAttribute('data-file-name');
+            const currentPath = window.location.pathname;
+            const currentFolder = new URLSearchParams(window.location.search).get('folder');
+            
+            // Set flag to indicate we should scroll on page load
+            sessionStorage.setItem('scrollToFile', 'true');
+            
+            // If clicking a root file and we're already on the root list page, force reload
+            if (isRoot && currentPath === '/list' && !currentFolder) {
+                event.preventDefault();
+                window.location.href = '/list#' + encodeURIComponent(fileName);
+                window.location.reload();
+            }
+        }
+
+        // Add click handlers to recent file items
+        document.addEventListener('DOMContentLoaded', function() {
+            const recentItems = document.querySelectorAll('.recent-file-item');
+            recentItems.forEach(item => {
+                item.addEventListener('click', handleRecentFileClick);
+            });
+        });
+
         // Render chart when page loads
-        document.addEventListener('DOMContentLoaded', renderStorageChart);
+        document.addEventListener('DOMContentLoaded', function() {
+            renderStorageChart();
+            scrollToFileCard();
+        });
     </script>
 </body>
 </html>
