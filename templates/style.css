@@ -1033,11 +1033,19 @@ body {
     padding: 8px;
     border-radius: 6px;
     background: #f9f9f9;
-    transition: background 0.2s;
+    transition: all 0.2s;
 }
 
-.legend-item:hover {
-    background: #f0f0f0;
+.storage-legend:hover .legend-item {
+    opacity: 0.4;
+    background: #e8e8e8;
+}
+
+.storage-legend:hover .legend-item:hover {
+    opacity: 1;
+    background: #f9f9f9;
+    transform: scale(1.02);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
 }
 
 .legend-color {

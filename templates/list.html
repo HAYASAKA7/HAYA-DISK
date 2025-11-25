@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HAYA-DISK - File Management</title>
-    <link rel="stylesheet" href="/static/style.css?v=7">
+    <link rel="stylesheet" href="/static/style.css?v=10">
 </head>
 <body>
     <div class="container">
@@ -415,8 +415,9 @@
             const centerY = 100;
             const radius = 90;
             let currentAngle = -90; // Start from top
+            const pathElements = [];
 
-            legendItems.forEach((item) => {
+            legendItems.forEach((item, index) => {
                 const percentage = parseFloat(item.dataset.percentage);
                 const color = item.dataset.color;
 
@@ -432,17 +433,33 @@
                     pathElement.setAttribute('fill', 'none');
                     pathElement.setAttribute('stroke', color);
                     pathElement.setAttribute('stroke-width', '20');
-                    pathElement.style.transition = 'opacity 0.3s';
+                    pathElement.style.transition = 'all 0.3s';
+                    pathElement.style.cursor = 'pointer';
                     
                     chart.appendChild(pathElement);
+                    pathElements.push(pathElement);
 
-                    // Add hover effect
-                    item.addEventListener('mouseenter', () => {
-                        pathElement.style.opacity = '0.7';
-                    });
-                    item.addEventListener('mouseleave', () => {
-                        pathElement.style.opacity = '1';
-                    });
+                    // Add hover effect - dim all other segments
+                    const addHoverEffect = () => {
+                        pathElements.forEach((p, i) => {
+                            if (p === pathElement) {
+                                p.style.opacity = '1';
+                            } else {
+                                p.style.opacity = '0.3';
+                            }
+                        });
+                    };
+
+                    const removeHoverEffect = () => {
+                        pathElements.forEach(p => {
+                            p.style.opacity = '1';
+                        });
+                    };
+
+                    pathElement.addEventListener('mouseenter', addHoverEffect);
+                    pathElement.addEventListener('mouseleave', removeHoverEffect);
+                    item.addEventListener('mouseenter', addHoverEffect);
+                    item.addEventListener('mouseleave', removeHoverEffect);
 
                     currentAngle = endAngle;
                 }
