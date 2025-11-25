@@ -270,7 +270,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## � Concurrency & Performance Optimizations
+## ✔ Concurrency & Performance Optimizations
 
 ### Multi-User Concurrent Access
 
@@ -349,7 +349,7 @@ User data is saved safely even during concurrent operations:
 - **Storage Scaling**: Limited by disk space only
 - **Memory Usage**: ~1-2MB per active user session
 
-## �👤 Author
+## 👩‍🔬 Author
 
 **HAYASAKA7**
 
