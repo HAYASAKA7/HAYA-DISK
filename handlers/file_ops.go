@@ -94,6 +94,10 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		defer f.Close()
 		io.Copy(f, file)
 
+		// Update folder size cache
+		fileInfo, _ := f.Stat()
+		services.UpdateFolderSize(targetPath, fileInfo.Size())
+
 		// Invalidate cache after upload
 		services.InvalidateUserCache(username)
 
@@ -264,12 +268,32 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	services.LockUserFileWrite(username)
 	defer services.UnlockUserFileWrite(username)
 
+	// Get file/folder size before deletion
+	var deletedSize int64
+	if info, err := os.Stat(targetPath); err == nil {
+		if info.IsDir() {
+			// Calculate folder size
+			deletedSize = calculateFolderSizeInOps(targetPath)
+		} else {
+			deletedSize = info.Size()
+		}
+	}
+
 	// Delete file or folder
 	err := os.RemoveAll(targetPath)
 	if err != nil {
 		http.Error(w, "Delete error", 500)
 		return
 	}
+
+	// Update parent folder size cache
+	var parentFolder string
+	if folder != "" && folder != "/" {
+		parentFolder = filepath.Join(userStoragePath, folder)
+	} else {
+		parentFolder = userStoragePath
+	}
+	services.UpdateFolderSize(parentFolder, -deletedSize)
 
 	// Invalidate cache after deletion
 	services.InvalidateUserCache(username)
@@ -410,12 +434,35 @@ func MoveFileHandler(w http.ResponseWriter, r *http.Request) {
 	services.LockUserFileWrite(username)
 	defer services.UnlockUserFileWrite(username)
 
+	// Get file size before moving
+	var fileSize int64
+	if info, err := os.Stat(sourcePath); err == nil {
+		fileSize = info.Size()
+	}
+
 	// Move file
 	err := os.Rename(sourcePath, targetPath)
 	if err != nil {
 		http.Error(w, "Failed to move file", 500)
 		return
 	}
+
+	// Update folder size caches
+	var sourceFolderPath, targetFolderPath string
+	if sourceFolder != "" && sourceFolder != "/" {
+		sourceFolderPath = filepath.Join(userStoragePath, sourceFolder)
+	} else {
+		sourceFolderPath = userStoragePath
+	}
+	if targetFolder != "" && targetFolder != "/" {
+		targetFolderPath = filepath.Join(userStoragePath, targetFolder)
+	} else {
+		targetFolderPath = userStoragePath
+	}
+
+	// Subtract from source, add to target
+	services.UpdateFolderSize(sourceFolderPath, -fileSize)
+	services.UpdateFolderSize(targetFolderPath, fileSize)
 
 	// Invalidate cache after moving file
 	services.InvalidateUserCache(username)
@@ -442,4 +489,19 @@ func getFolderList(basePath string) ([]string, error) {
 		}
 	}
 	return folders, nil
+}
+
+// calculateFolderSizeInOps calculates folder size for file operations
+func calculateFolderSizeInOps(folderPath string) int64 {
+	var totalSize int64
+	filepath.Walk(folderPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !info.IsDir() {
+			totalSize += info.Size()
+		}
+		return nil
+	})
+	return totalSize
 }

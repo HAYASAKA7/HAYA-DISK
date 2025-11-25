@@ -104,9 +104,13 @@ func getFileList(targetPath string, currentFolder string) ([]models.FileInfo, er
 				folderPath = f.Name()
 			}
 
-			// Calculate folder size
+			// Get folder size from cache or calculate if not cached
 			fullFolderPath := filepath.Join(targetPath, f.Name())
-			folderSize := calculateFolderSize(fullFolderPath)
+			folderSize, cached := services.GetFolderSize(fullFolderPath)
+			if !cached {
+				// Calculate and cache the folder size
+				folderSize = services.RecalculateFolderSize(fullFolderPath, calculateFolderSize)
+			}
 
 			fileList = append(fileList, models.FileInfo{
 				Name:     f.Name(),
