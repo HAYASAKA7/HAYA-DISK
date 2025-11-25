@@ -210,8 +210,8 @@ func calculateStorageStats(basePath string) models.StorageStats {
 		size := info.Size()
 		stats.TotalSize += size
 
-		// Categorize file
-		category := categorizeFile(ext)
+		// Categorize file using utility function
+		category := utils.GetFileCategory(ext)
 		if stat, exists := typeMap[category]; exists {
 			stat.Size += size
 			stat.Count++
@@ -235,36 +235,6 @@ func calculateStorageStats(basePath string) models.StorageStats {
 	}
 
 	return stats
-}
-
-// categorizeFile returns the category for a file extension
-func categorizeFile(ext string) string {
-	imageExts := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".bmp": true, ".svg": true, ".webp": true, ".ico": true}
-	videoExts := map[string]bool{".mp4": true, ".avi": true, ".mkv": true, ".mov": true, ".wmv": true, ".flv": true, ".webm": true, ".m4v": true}
-	audioExts := map[string]bool{".mp3": true, ".wav": true, ".flac": true, ".aac": true, ".ogg": true, ".wma": true, ".m4a": true}
-	docExts := map[string]bool{".pdf": true, ".doc": true, ".docx": true, ".txt": true, ".rtf": true, ".odt": true, ".xls": true, ".xlsx": true, ".ppt": true, ".pptx": true}
-	archiveExts := map[string]bool{".zip": true, ".rar": true, ".7z": true, ".tar": true, ".gz": true, ".bz2": true, ".xz": true}
-	codeExts := map[string]bool{".go": true, ".js": true, ".py": true, ".java": true, ".cpp": true, ".c": true, ".h": true, ".html": true, ".css": true, ".json": true, ".xml": true, ".sql": true, ".sh": true, ".bat": true}
-
-	if imageExts[ext] {
-		return "Images"
-	}
-	if videoExts[ext] {
-		return "Videos"
-	}
-	if audioExts[ext] {
-		return "Audio"
-	}
-	if docExts[ext] {
-		return "Documents"
-	}
-	if archiveExts[ext] {
-		return "Archives"
-	}
-	if codeExts[ext] {
-		return "Code"
-	}
-	return "Others"
 }
 
 // getRecentFiles retrieves the 5 most recently modified files
