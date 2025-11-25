@@ -103,9 +103,14 @@ func getFileList(targetPath string, currentFolder string) ([]models.FileInfo, er
 			} else {
 				folderPath = f.Name()
 			}
+
+			// Calculate folder size
+			fullFolderPath := filepath.Join(targetPath, f.Name())
+			folderSize := calculateFolderSize(fullFolderPath)
+
 			fileList = append(fileList, models.FileInfo{
 				Name:     f.Name(),
-				Size:     "-",
+				Size:     utils.FormatFileSize(folderSize),
 				Modified: info.ModTime().Format("2006-01-02 15:04"),
 				Icon:     "📁",
 				IsImage:  false,
@@ -140,6 +145,21 @@ func getFileList(targetPath string, currentFolder string) ([]models.FileInfo, er
 		}
 	}
 	return fileList, nil
+}
+
+// calculateFolderSize calculates the total size of all files in a folder recursively
+func calculateFolderSize(folderPath string) int64 {
+	var totalSize int64
+	filepath.Walk(folderPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !info.IsDir() {
+			totalSize += info.Size()
+		}
+		return nil
+	})
+	return totalSize
 }
 
 // getAllFolders recursively gets all folders for the move functionality
