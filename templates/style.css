@@ -160,6 +160,13 @@ body {
     margin: 0;
 }
 
+.title-icon {
+    vertical-align: middle;
+    height: 1em;
+    margin-right: 8px;
+    border-radius: 8px;
+}
+
 .header-actions {
     display: flex;
     align-items: center;

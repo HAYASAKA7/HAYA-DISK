@@ -34,6 +34,7 @@ func main() {
 	http.HandleFunc("/api/get-user-info", handlers.APIGetUserInfoHandler)
 	http.HandleFunc("/api/update-profile", handlers.APIUpdateProfileHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(config.TemplatesDir))))
+	http.Handle("/resources/", http.StripPrefix("/resources/", http.FileServer(http.Dir("resources"))))
 
 	// Start server
 	fmt.Printf("Server started and accessible at:\n")
