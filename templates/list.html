@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HAYA-DISK - File Management</title>
-    <link rel="stylesheet" href="/static/style.css?v=4">
+    <link rel="stylesheet" href="/static/style.css?v=7">
 </head>
 <body>
     <div class="container">
@@ -12,16 +12,28 @@
             <div class="header-content">
                 <h1 class="title">💾 HAYA-DISK</h1>
                 <div class="header-actions">
-                    <span class="user-info">👤 {{.username}}</span>
                     <button type="button" class="upload-btn" onclick="openCreateFolderModal()">+ New Folder</button>
                     <a href="/upload{{if .currentFolder}}?folder={{.currentFolder}}{{end}}" class="upload-btn">+ Upload File</a>
-                    <button type="button" class="settings-btn" onclick="openSettingsModal()">⚙️ Settings</button>
-                    <a href="/logout" class="logout-btn">Logout</a>
+                    <div class="user-dropdown">
+                        <button type="button" class="user-info" onclick="toggleUserDropdown()">
+                            👤 {{.username}}
+                            <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div class="user-dropdown-menu" id="userDropdownMenu">
+                            <button type="button" class="dropdown-item" onclick="openSettingsModal(); closeUserDropdown()">
+                                ⚙️ Settings
+                            </button>
+                            <a href="/logout" class="dropdown-item">
+                                🚪 Logout
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </header>
 
-        <!-- Widgets Container -->
+        <!-- Widgets Container - Only show on home page -->
+        {{if .isHomePage}}
         <div class="widgets-container">
             <!-- Storage Widget -->
             <div class="storage-widget">
@@ -84,6 +96,7 @@
                 </div>
             </div>
         </div>
+        {{end}}
 
         <main class="main-content">
             {{if .currentFolder}}
@@ -454,6 +467,24 @@
                 y: cy + (r * Math.sin(angleInRadians))
             };
         }
+
+        // User dropdown functions
+        function toggleUserDropdown() {
+            const dropdown = document.getElementById('userDropdownMenu');
+            dropdown.classList.toggle('show');
+        }
+
+        function closeUserDropdown() {
+            const dropdown = document.getElementById('userDropdownMenu');
+            dropdown.classList.remove('show');
+        }
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', function(event) {
+            if (!event.target.closest('.user-dropdown')) {
+                closeUserDropdown();
+            }
+        });
 
         // Render chart when page loads
         document.addEventListener('DOMContentLoaded', renderStorageChart);

@@ -64,6 +64,9 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 	// Get recent files
 	recentFiles := getRecentFiles(userStoragePath)
 
+	// Determine if we're on the home page (no folder selected)
+	isHomePage := currentFolder == ""
+
 	data := map[string]interface{}{
 		"files":         files,
 		"username":      username,
@@ -71,6 +74,7 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 		"allFolders":    allFolders,
 		"storageStats":  storageStats,
 		"recentFiles":   recentFiles,
+		"isHomePage":    isHomePage,
 	}
 
 	tmpl, err := template.ParseFiles(filepath.Join(config.TemplatesDir, "list.html"))

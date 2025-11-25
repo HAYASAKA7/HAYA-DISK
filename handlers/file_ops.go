@@ -67,7 +67,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 			targetPath = filepath.Join(userStoragePath, folder)
 			// Security check
 			if !isPathSafe(targetPath, userStoragePath) {
-				http.Error(w, "Invalid folder", 403)
+				http.Error(w, "Invalid folder", http.StatusForbidden)
 				return
 			}
 		} else {
@@ -125,7 +125,7 @@ func DownloadHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Security check: ensure path is within user's storage
 	if !isPathSafe(filePath, userStoragePath) {
-		http.Error(w, "Unauthorized", 403)
+		http.Error(w, "Unauthorized", http.StatusForbidden)
 		return
 	}
 
@@ -144,7 +144,7 @@ func DownloadHandler(w http.ResponseWriter, r *http.Request) {
 func ThumbnailHandler(w http.ResponseWriter, r *http.Request) {
 	username := middleware.GetSessionUser(r)
 	if username == "" {
-		http.Error(w, "Unauthorized", 401)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -157,7 +157,7 @@ func ThumbnailHandler(w http.ResponseWriter, r *http.Request) {
 
 	user := services.GetUser(username)
 	if user == nil {
-		http.Error(w, "Unauthorized", 401)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -179,7 +179,7 @@ func ThumbnailHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Security check
 	if !isPathSafe(filePath, userStoragePath) {
-		http.Error(w, "Unauthorized", 403)
+		http.Error(w, "Unauthorized", http.StatusForbidden)
 		return
 	}
 
@@ -205,7 +205,7 @@ func isPathSafe(filePath, allowedDir string) bool {
 func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	username := middleware.GetSessionUser(r)
 	if username == "" {
-		http.Error(w, "Unauthorized", 401)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -218,7 +218,7 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 
 	user := services.GetUser(username)
 	if user == nil {
-		http.Error(w, "Unauthorized", 401)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -234,7 +234,7 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Security check
 	if !isPathSafe(targetPath, userStoragePath) {
-		http.Error(w, "Unauthorized", 403)
+		http.Error(w, "Unauthorized", http.StatusForbidden)
 		return
 	}
 
@@ -257,12 +257,12 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 func CreateFolderHandler(w http.ResponseWriter, r *http.Request) {
 	username := middleware.GetSessionUser(r)
 	if username == "" {
-		http.Error(w, "Unauthorized", 401)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", 405)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -283,7 +283,7 @@ func CreateFolderHandler(w http.ResponseWriter, r *http.Request) {
 
 	user := services.GetUser(username)
 	if user == nil {
-		http.Error(w, "Unauthorized", 401)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -299,7 +299,7 @@ func CreateFolderHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Security check
 	if !isPathSafe(targetPath, userStoragePath) {
-		http.Error(w, "Unauthorized", 403)
+		http.Error(w, "Unauthorized", http.StatusForbidden)
 		return
 	}
 
@@ -322,12 +322,12 @@ func CreateFolderHandler(w http.ResponseWriter, r *http.Request) {
 func MoveFileHandler(w http.ResponseWriter, r *http.Request) {
 	username := middleware.GetSessionUser(r)
 	if username == "" {
-		http.Error(w, "Unauthorized", 401)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", 405)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -342,7 +342,7 @@ func MoveFileHandler(w http.ResponseWriter, r *http.Request) {
 
 	user := services.GetUser(username)
 	if user == nil {
-		http.Error(w, "Unauthorized", 401)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -366,7 +366,7 @@ func MoveFileHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Security checks
 	if !isPathSafe(sourcePath, userStoragePath) || !isPathSafe(targetPath, userStoragePath) {
-		http.Error(w, "Unauthorized", 403)
+		http.Error(w, "Unauthorized", http.StatusForbidden)
 		return
 	}
 
