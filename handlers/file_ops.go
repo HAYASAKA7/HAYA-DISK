@@ -61,6 +61,11 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		folder := r.FormValue("folder")
 		userStoragePath := services.GetUserStoragePath(username, user.UniqueCode)
 
+		// Normalize folder path
+		if folder == "/" {
+			folder = ""
+		}
+
 		// Build target path
 		var targetPath string
 		if folder != "" && folder != "/" {
@@ -72,6 +77,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			targetPath = userStoragePath
+			folder = "/"
 		}
 
 		filePath := filepath.Join(targetPath, header.Filename)
@@ -80,7 +86,15 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		services.LockUserFileWrite(username)
 		defer services.UnlockUserFileWrite(username)
 
-		// Check if file already exists
+		// Check if file already exists in database
+		relativePath, _ := filepath.Rel(userStoragePath, filePath)
+		exists, _ := services.FileExistsInDB(username, relativePath)
+		if exists {
+			http.Error(w, "File already exists", http.StatusConflict)
+			return
+		}
+
+		// Check if file already exists on disk (safety check)
 		if _, err := os.Stat(filePath); err == nil {
 			http.Error(w, "File already exists", http.StatusConflict)
 			return
@@ -92,7 +106,41 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		defer f.Close()
-		io.Copy(f, file)
+
+		// Copy file content
+		written, err := io.Copy(f, file)
+		if err != nil {
+			os.Remove(filePath) // Cleanup on error
+			http.Error(w, "Save error", 500)
+			return
+		}
+
+		// Calculate file hash
+		fileHash := utils.CalculateFileSHA256(filePath)
+
+		// Get MIME type
+		mimeType := header.Header.Get("Content-Type")
+		if mimeType == "" {
+			mimeType = "application/octet-stream"
+		}
+
+		// Save file metadata to database
+		err = services.AddFileMetadata(
+			username,
+			header.Filename,
+			relativePath,
+			folder,
+			mimeType,
+			fileHash,
+			written,
+			false, // not a directory
+		)
+		if err != nil {
+			// If database insert fails, remove the file
+			os.Remove(filePath)
+			http.Error(w, "Failed to save file metadata", 500)
+			return
+		}
 
 		// Update folder size cache
 		fileInfo, _ := f.Stat()
@@ -268,6 +316,9 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	services.LockUserFileWrite(username)
 	defer services.UnlockUserFileWrite(username)
 
+	// Get relative path for database operations
+	relativePath, _ := filepath.Rel(userStoragePath, targetPath)
+
 	// Get file/folder size before deletion
 	var deletedSize int64
 	if info, err := os.Stat(targetPath); err == nil {
@@ -279,8 +330,15 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Delete file or folder
-	err := os.RemoveAll(targetPath)
+	// Delete from database first (including children if folder)
+	err := services.DeleteFileMetadataRecursive(username, relativePath)
+	if err != nil {
+		http.Error(w, "Database delete error", 500)
+		return
+	}
+
+	// Delete file or folder from disk
+	err = os.RemoveAll(targetPath)
 	if err != nil {
 		http.Error(w, "Delete error", 500)
 		return
@@ -342,6 +400,11 @@ func CreateFolderHandler(w http.ResponseWriter, r *http.Request) {
 
 	userStoragePath := services.GetUserStoragePath(username, user.UniqueCode)
 
+	// Normalize current folder
+	if currentFolder == "" || currentFolder == "/" {
+		currentFolder = "/"
+	}
+
 	// Build target path
 	var targetPath string
 	if currentFolder != "" && currentFolder != "/" {
@@ -360,10 +423,38 @@ func CreateFolderHandler(w http.ResponseWriter, r *http.Request) {
 	services.LockUserFileWrite(username)
 	defer services.UnlockUserFileWrite(username)
 
-	// Create folder
+	// Get relative path for database
+	relativePath, _ := filepath.Rel(userStoragePath, targetPath)
+
+	// Check if folder already exists in database
+	exists, _ := services.FileExistsInDB(username, relativePath)
+	if exists {
+		http.Error(w, "Folder already exists", http.StatusConflict)
+		return
+	}
+
+	// Create folder on disk
 	err := os.MkdirAll(targetPath, os.ModePerm)
 	if err != nil {
 		http.Error(w, "Failed to create folder", 500)
+		return
+	}
+
+	// Add folder metadata to database
+	err = services.AddFileMetadata(
+		username,
+		folderName,
+		relativePath,
+		currentFolder,
+		"",   // no mime type for folders
+		"",   // no hash for folders
+		0,    // folders have 0 size
+		true, // is directory
+	)
+	if err != nil {
+		// Cleanup on error
+		os.Remove(targetPath)
+		http.Error(w, "Failed to save folder metadata", 500)
 		return
 	}
 
@@ -408,6 +499,14 @@ func MoveFileHandler(w http.ResponseWriter, r *http.Request) {
 
 	userStoragePath := services.GetUserStoragePath(username, user.UniqueCode)
 
+	// Normalize folder paths
+	if sourceFolder == "" || sourceFolder == "/" {
+		sourceFolder = "/"
+	}
+	if targetFolder == "" || targetFolder == "/" {
+		targetFolder = "/"
+	}
+
 	// Build source path
 	var sourcePath string
 	if sourceFolder != "" && sourceFolder != "/" {
@@ -434,16 +533,30 @@ func MoveFileHandler(w http.ResponseWriter, r *http.Request) {
 	services.LockUserFileWrite(username)
 	defer services.UnlockUserFileWrite(username)
 
+	// Get relative paths for database
+	sourceRelPath, _ := filepath.Rel(userStoragePath, sourcePath)
+	targetRelPath, _ := filepath.Rel(userStoragePath, targetPath)
+
 	// Get file size before moving
 	var fileSize int64
 	if info, err := os.Stat(sourcePath); err == nil {
 		fileSize = info.Size()
 	}
 
-	// Move file
+	// Move file on disk
 	err := os.Rename(sourcePath, targetPath)
 	if err != nil {
 		http.Error(w, "Failed to move file", 500)
+		return
+	}
+
+	// Update database: change storage_path and parent_path
+	query := `UPDATE files SET storage_path = ?, parent_path = ?, modified_at = datetime('now') WHERE username = ? AND storage_path = ?`
+	_, err = services.GetDB().Exec(query, targetRelPath, targetFolder, username, sourceRelPath)
+	if err != nil {
+		// Rollback file move on database error
+		os.Rename(targetPath, sourcePath)
+		http.Error(w, "Failed to update file metadata", 500)
 		return
 	}
 

@@ -2,7 +2,6 @@ package services
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,50 +13,9 @@ import (
 )
 
 var (
-	users    = make(map[string]*models.User)
 	sessions = make(map[string]*models.Session)
 	mu       sync.RWMutex
 )
-
-// LoadUsers loads all users from the users.json file
-func LoadUsers() {
-	data, err := os.ReadFile(config.UsersFile)
-	if err != nil {
-		return // File doesn't exist yet
-	}
-	var userList []models.User
-	if err := json.Unmarshal(data, &userList); err != nil {
-		return
-	}
-	mu.Lock()
-	for i := range userList {
-		users[userList[i].Username] = &userList[i]
-	}
-	mu.Unlock()
-}
-
-// SaveUsers saves all users to the users.json file
-func SaveUsers() {
-	mu.RLock()
-	var userList []*models.User
-	for _, user := range users {
-		userCopy := *user // Create a copy to avoid race conditions
-		userList = append(userList, &userCopy)
-	}
-	mu.RUnlock()
-
-	data, err := json.MarshalIndent(userList, "", "  ")
-	if err != nil {
-		return
-	}
-
-	// Write to temp file first, then atomic rename
-	tempFile := config.UsersFile + ".tmp"
-	if err := os.WriteFile(tempFile, data, 0644); err != nil {
-		return
-	}
-	os.Rename(tempFile, config.UsersFile)
-}
 
 // GenerateUniqueCode generates a random unique code
 func GenerateUniqueCode() string {
@@ -73,51 +31,34 @@ func GetUserStoragePath(username, uniqueCode string) string {
 
 // FindUserByCredential finds a user by username, email, or phone
 func FindUserByCredential(credential string) *models.User {
-	mu.RLock()
-	defer mu.RUnlock()
-
 	// Try username first
-	if user, exists := users[credential]; exists {
+	if user, _ := GetUserByUsernameDB(credential); user != nil {
 		return user
 	}
 
-	// Try email or phone
-	for _, user := range users {
-		if user.Email == credential || user.Phone == credential {
-			return user
-		}
+	// Try email
+	if user, _ := GetUserByEmailDB(credential); user != nil {
+		return user
 	}
+
+	// Try phone
+	if user, _ := GetUserByPhoneDB(credential); user != nil {
+		return user
+	}
+
 	return nil
 }
 
 // EmailExists checks if email is already registered
 func EmailExists(email string) bool {
-	if email == "" {
-		return false
-	}
-	mu.RLock()
-	defer mu.RUnlock()
-	for _, user := range users {
-		if user.Email == email {
-			return true
-		}
-	}
-	return false
+	exists, _ := EmailExistsDB(email)
+	return exists
 }
 
 // PhoneExists checks if phone is already registered
 func PhoneExists(phone string) bool {
-	if phone == "" {
-		return false
-	}
-	mu.RLock()
-	defer mu.RUnlock()
-	for _, user := range users {
-		if user.Phone == phone {
-			return true
-		}
-	}
-	return false
+	exists, _ := PhoneExistsDB(phone)
+	return exists
 }
 
 // CreateUser creates and saves a new user
@@ -134,37 +75,34 @@ func CreateUser(username, email, phone, password string) (*models.User, error) {
 		loginType = "phone"
 	}
 
-	newUser := &models.User{
-		Username:   username,
-		Email:      email,
-		Phone:      phone,
-		Password:   password,
-		UniqueCode: uniqueCode,
-		CreatedAt:  time.Now().Format("2006-01-02 15:04:05"),
-		LoginType:  loginType,
+	createdAt := time.Now()
+
+	// Create user in database
+	err := CreateUserDB(username, email, phone, password, uniqueCode, createdAt, loginType)
+	if err != nil {
+		return nil, err
 	}
 
+	// Create storage folder
 	userStoragePath := GetUserStoragePath(username, uniqueCode)
 	os.MkdirAll(userStoragePath, os.ModePerm)
 
-	mu.Lock()
-	users[username] = newUser
-	mu.Unlock()
-	SaveUsers()
-
-	return newUser, nil
+	// Return the created user
+	return GetUserByUsernameDB(username)
 }
 
 // UpdateUserProfile updates user's email and phone
 func UpdateUserProfile(username, email, phone string) error {
-	mu.Lock()
-	user, exists := users[username]
-	if !exists {
-		mu.Unlock()
+	// Get user from database
+	user, err := GetUserByUsernameDB(username)
+	if err != nil {
+		return err
+	}
+	if user == nil {
 		return fmt.Errorf("user not found")
 	}
 
-	// Update user
+	// Update fields
 	if email != "" {
 		user.Email = email
 	}
@@ -181,18 +119,16 @@ func UpdateUserProfile(username, email, phone string) error {
 		user.LoginType = "phone"
 	}
 
-	mu.Unlock()
-	SaveUsers()
-
-	return nil
+	// Update in database
+	query := `UPDATE users SET email = ?, phone = ?, login_type = ? WHERE username = ?`
+	_, err = GetDB().Exec(query, user.Email, user.Phone, user.LoginType, username)
+	return err
 }
 
 // UsernameExists checks if username is already taken
 func UsernameExists(username string) bool {
-	mu.RLock()
-	defer mu.RUnlock()
-	_, exists := users[username]
-	return exists
+	user, _ := GetUserByUsernameDB(username)
+	return user != nil
 }
 
 // UpdateUsername changes a user's username and renames their storage folder
@@ -201,17 +137,17 @@ func UpdateUsername(oldUsername, newUsername string) error {
 		return nil // No change needed
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
-
 	// Check if old user exists
-	user, exists := users[oldUsername]
-	if !exists {
+	user, err := GetUserByUsernameDB(oldUsername)
+	if err != nil {
+		return err
+	}
+	if user == nil {
 		return fmt.Errorf("user not found")
 	}
 
 	// Check if new username is already taken
-	if _, taken := users[newUsername]; taken {
+	if UsernameExists(newUsername) {
 		return fmt.Errorf("username already exists")
 	}
 
@@ -223,24 +159,24 @@ func UpdateUsername(oldUsername, newUsername string) error {
 		return fmt.Errorf("failed to rename storage folder: %v", err)
 	}
 
-	// Update username in user object
-	user.Username = newUsername
+	// Update username in database
+	query := `UPDATE users SET username = ? WHERE username = ?`
+	_, err = GetDB().Exec(query, newUsername, oldUsername)
+	if err != nil {
+		// Rollback folder rename
+		os.Rename(newPath, oldPath)
+		return fmt.Errorf("failed to update username in database: %v", err)
+	}
 
-	// Update in map
-	delete(users, oldUsername)
-	users[newUsername] = user
-
-	// Save to file
-	mu.Unlock()
-	SaveUsers()
-	mu.Lock()
+	// Also update files table
+	query = `UPDATE files SET username = ? WHERE username = ?`
+	GetDB().Exec(query, newUsername, oldUsername)
 
 	return nil
 }
 
 // GetUser retrieves a user by username
 func GetUser(username string) *models.User {
-	mu.RLock()
-	defer mu.RUnlock()
-	return users[username]
+	user, _ := GetUserByUsernameDB(username)
+	return user
 }

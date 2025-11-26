@@ -1,7 +1,11 @@
 package utils
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"io"
+	"os"
 	"regexp"
 )
 
@@ -114,4 +118,20 @@ func GetImageContentType(ext string) string {
 		return ct
 	}
 	return "image/jpeg"
+}
+
+// CalculateFileSHA256 calculates SHA256 hash of a file
+func CalculateFileSHA256(filePath string) string {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return ""
+	}
+
+	return hex.EncodeToString(hash.Sum(nil))
 }

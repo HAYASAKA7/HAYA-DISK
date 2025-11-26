@@ -78,3 +78,18 @@ type RecentFile struct {
 	Modified   string
 	IsImage    bool
 }
+
+// FileMetadata represents file metadata stored in database
+type FileMetadata struct {
+	ID          int64     `json:"id"`
+	Username    string    `json:"username"`
+	Filename    string    `json:"filename"`
+	StoragePath string    `json:"storage_path"`
+	ParentPath  string    `json:"parent_path"`
+	FileSize    int64     `json:"file_size"`
+	MimeType    string    `json:"mime_type"`
+	FileHash    string    `json:"file_hash"`
+	IsDirectory bool      `json:"is_directory"`
+	UploadedAt  time.Time `json:"uploaded_at"`
+	ModifiedAt  time.Time `json:"modified_at"`
+}

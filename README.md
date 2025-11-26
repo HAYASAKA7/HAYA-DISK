@@ -1,8 +1,9 @@
 # HAYA-DISK 📁
 
-A modern, secure, and user-friendly file storage system built with Go. HAYA-DISK allows users to upload, organize, and manage their files with an elegant web interface.
+A modern, secure, and user-friendly file storage system built with Go. HAYA-DISK allows users to upload, organize, and manage their files with an elegant web interface, powered by SQLite for secure and efficient data management.
 
 ![HAYA-DISK](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)
+![SQLite](https://img.shields.io/badge/SQLite-3.0+-003B57?style=flat&logo=sqlite)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## ✨ Features
@@ -11,6 +12,7 @@ A modern, secure, and user-friendly file storage system built with Go. HAYA-DISK
 - **Secure Authentication**: User registration and login with password hashing
 - **Session Management**: Secure session handling with automatic expiration
 - **Profile Management**: Update display name and password through settings
+- **SQLite Database**: All user data stored in secure, fast SQLite database
 
 ### 📂 File Management
 - **File Upload**: Drag-and-drop or click-to-upload interface
@@ -18,6 +20,7 @@ A modern, secure, and user-friendly file storage system built with Go. HAYA-DISK
 - **File Operations**: Download, delete, and move files between folders
 - **Thumbnail Preview**: Automatic thumbnail generation for images and videos
 - **File Type Support**: Images, videos, audio files, documents, and more
+- **Database-Backed Metadata**: All file metadata tracked in SQLite for security and integrity
 
 ### 📊 Dashboard Widgets
 - **Storage Overview**: Visual pie chart showing storage usage by file type
@@ -48,68 +51,104 @@ A modern, secure, and user-friendly file storage system built with Go. HAYA-DISK
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
-   git clone https://github.com/HAYASAKA7/HAYA-DISK.git
-   cd HAYA-DISK
+   git clone https://github.com/HAYASAKA7/HAYA_DISK.git
+   cd HAYA_DISK
    ```
 
 2. **Build the application**
+
    ```bash
    go build -o haya-disk.exe
    ```
 
-3. **Run the application**
+3. **Run the migration (first time only)**
+
+   **Option A: Automatic Migration (Recommended)**
+   
+   Simply run the application - it will automatically detect `users.json` and migrate data on first startup:
+
    ```bash
    ./haya-disk.exe
    ```
+
+   **Option B: Manual Migration**
+   
+   If you prefer to migrate separately or if automatic migration fails:
+
+   ```bash
+   go build -o migrate.exe ./cmd/migrate
+   ./migrate.exe
+   ```
+
+   This will:
+   - Create the SQLite database (`haya-disk.db`)
+   - Migrate all users from `users.json`
+   - Scan and register all existing files in the `storage` directory
+
+4. **Run the application**
+
+   ```bash
+   ./haya-disk.exe
+   ```
+
    Or directly run without building:
+
    ```bash
    go run main.go
    ```
 
-4. **Access the application**
+5. **Access the application**
+
    Open your browser and navigate to:
    - Local: `http://localhost:8080`
    - Network: `http://<your-ip>:8080`
 
 ## 📁 Project Structure
 
-```
-HAYA-DISK/
-├── main.go                 # Application entry point
-├── go.mod                  # Go module definition
-├── users.json             # User data storage (auto-generated)
+```text
+HAYA_DISK/
+├── main.go                    # Application entry point
+├── go.mod                     # Go module definition
+├── haya-disk.db              # SQLite database (auto-generated)
+├── users.json                # Legacy user data (kept as backup)
+├── cmd/
+│   └── migrate/
+│       └── main.go           # Migration tool for legacy data
 ├── config/
-│   └── constants.go       # Configuration constants
+│   └── constants.go          # Configuration constants
 ├── handlers/
-│   ├── auth.go           # Authentication handlers
-│   ├── file_list.go      # File listing handlers
-│   ├── file_ops.go       # File operations handlers
-│   └── page.go           # Page rendering handlers
+│   ├── auth.go              # Authentication handlers
+│   ├── file_list.go         # File listing handlers
+│   ├── file_ops.go          # File operations handlers
+│   └── page.go              # Page rendering handlers
 ├── middleware/
-│   ├── session.go        # Session management
-│   └── rate_limiter.go   # Rate limiting middleware
+│   ├── session.go           # Session management
+│   └── rate_limiter.go      # Rate limiting middleware
 ├── models/
-│   └── models.go         # Data models
+│   └── models.go            # Data models (User, FileMetadata, etc.)
 ├── services/
-│   ├── session_service.go    # Session service layer
-│   ├── user_service.go       # User service layer
-│   ├── file_lock_service.go  # File operation locking
-│   └── cache_service.go      # Directory listing cache
-├── storage/              # User file storage (auto-generated)
+│   ├── database_service.go  # SQLite database operations
+│   ├── session_service.go   # Session service layer
+│   ├── user_service.go      # User service layer
+│   ├── file_lock_service.go # File operation locking
+│   └── cache_service.go     # Directory listing cache
+├── storage/                 # User file storage (auto-generated)
 │   └── {username}_{hash}/
 │       ├── Audios/
 │       ├── Images/
 │       ├── Videos/
 │       └── ...
-├── templates/            # HTML templates and assets
+├── templates/               # HTML templates and assets
 │   ├── list.html
 │   ├── login.html
 │   ├── register.html
 │   ├── upload.html
 │   └── style.css
 └── utils/
-    └── utils.go          # Utility functions
+    ├── utils.go             # Utility functions
+    └── migrate.go           # Migration utilities
 ```
 
 ## 🔧 Configuration
@@ -193,18 +232,20 @@ go build -o haya-disk
 
 ### Project Dependencies
 
-This project uses only Go standard library packages:
-- `net/http` - HTTP server and client
-- `encoding/json` - JSON encoding/decoding
-- `crypto/sha256` - Password hashing
-- `html/template` - HTML templating
-- `io` - I/O operations
-- `os` - Operating system functionality
-- `path/filepath` - File path manipulation
-- `time` - Time operations
-- `sync` - Synchronization primitives (mutexes, locks)
-- `image` - Image processing
-- `image/jpeg`, `image/png` - Image format support
+- **SQLite Database**: `modernc.org/sqlite` - Pure Go SQLite driver (no CGO required)
+- **Go Standard Library**:
+  - `net/http` - HTTP server and client
+  - `encoding/json` - JSON encoding/decoding
+  - `crypto/sha256` - Password hashing
+  - `html/template` - HTML templating
+  - `io` - I/O operations
+  - `os` - Operating system functionality
+  - `path/filepath` - File path manipulation
+  - `time` - Time operations
+  - `sync` - Synchronization primitives (mutexes, locks)
+  - `image` - Image processing
+  - `image/jpeg`, `image/png` - Image format support
+  - `database/sql` - Database interface
 
 ## 🔒 Security Features
 
@@ -215,6 +256,10 @@ This project uses only Go standard library packages:
 - **User Isolation**: Each user has their own isolated storage directory
 - **Rate Limiting**: Upload rate limits to prevent abuse and DoS attacks
 - **Concurrent Access Control**: Thread-safe file operations with proper locking
+- **File Metadata Security**: Only files registered in database are accessible
+  - **Prevents unauthorized access**: Manually added files won't appear in user's file list
+  - **Database integrity**: File operations tracked and validated through SQLite
+  - **Tamper-proof**: Files without database records are invisible to users
 
 ## 🎨 Customization
 
@@ -246,15 +291,121 @@ Update the settings handler in `handlers/page.go` to change storage limits and u
 | `/register` | GET/POST | User registration |
 | `/logout` | GET | User logout |
 | `/list` | GET | File listing page |
-| `/upload` | GET/POST | File upload |
+| `/upload` | GET/POST | File upload (with rate limiting) |
 | `/download` | GET | File download |
-| `/delete` | POST | File deletion |
+| `/delete` | POST | File/folder deletion |
 | `/create-folder` | POST | Create new folder |
 | `/move-file` | POST | Move file to folder |
 | `/thumbnail` | GET | Get file thumbnail |
 | `/settings` | GET/POST | User settings |
 | `/api/get-user-info` | GET | Get user information |
 | `/api/update-profile` | POST | Update user profile |
+
+## 📊 Database Schema
+
+### Users Table
+
+```sql
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    email TEXT,
+    phone TEXT,
+    password TEXT NOT NULL,
+    unique_code TEXT NOT NULL UNIQUE,
+    created_at DATETIME NOT NULL,
+    login_type TEXT
+);
+```
+
+### Files Table
+
+```sql
+CREATE TABLE files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    storage_path TEXT NOT NULL UNIQUE,
+    parent_path TEXT NOT NULL DEFAULT '/',
+    file_size INTEGER NOT NULL DEFAULT 0,
+    mime_type TEXT,
+    file_hash TEXT,
+    is_directory BOOLEAN NOT NULL DEFAULT 0,
+    uploaded_at DATETIME NOT NULL,
+    modified_at DATETIME NOT NULL,
+    FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+);
+```
+
+### Key Features
+
+- **Indexed lookups**: Fast queries on username, parent_path, and storage_path
+- **Foreign key constraints**: Automatic cascade deletion when user is deleted
+- **File deduplication**: SHA-256 hash tracking for potential deduplication
+- **MIME type tracking**: Proper content type handling
+- **Audit trail**: Upload and modification timestamps
+
+## 🔄 Migration from JSON to SQLite
+
+### Why SQLite?
+
+HAYA-DISK has been upgraded from JSON file storage to SQLite database for several important reasons:
+
+#### 🔐 Security Enhancement
+
+**Before (JSON-based)**: The system directly read the filesystem, meaning any file manually added to a user's storage folder would appear in their file list - a **major security vulnerability**.
+
+**After (SQLite-based)**: Only files registered in the database are accessible. Manually added files are completely invisible to users, preventing unauthorized access and tampering.
+
+#### ⚡ Performance Improvements
+
+- **Faster queries**: Indexed database lookups vs. file scanning
+- **Efficient filtering**: SQL queries instead of in-memory filtering
+- **Better caching**: Database-level optimizations
+- **Concurrent access**: Better handling of simultaneous users
+
+#### 🎯 Feature Enablement
+
+The SQLite migration enables future features:
+
+- File sharing between users
+- File versioning and history
+- Advanced search capabilities
+- Storage quotas per user
+- Activity logs and audit trails
+- File tags and categories
+- Trash/recycle bin functionality
+
+### Migration Process
+
+If you're upgrading from an older version:
+
+1. **Automatic Migration**: Run the migration tool once
+
+   ```bash
+   go build -o migrate.exe ./cmd/migrate
+   ./migrate.exe
+   ```
+
+2. **What Gets Migrated**:
+   - All users from `users.json` → `users` table
+   - All files scanned from `storage/` → `files` table
+   - File metadata calculated (size, hash, MIME type)
+
+3. **Safe Migration**:
+   - Original `users.json` is preserved as backup
+   - Files remain in same location on disk
+   - Idempotent - can be run multiple times safely
+
+4. **Rollback**: Keep your `users.json` backup in case you need to revert
+
+### Database Location
+
+The SQLite database is stored as `haya-disk.db` in the application root directory. You can:
+
+- **Backup**: Simply copy the `.db` file
+- **Restore**: Replace with a backup copy
+- **View**: Use any SQLite browser tool (DB Browser for SQLite, etc.)
 
 ## 🤝 Contributing
 
@@ -354,7 +505,7 @@ User data is saved safely even during concurrent operations:
 **HAYASAKA7**
 
 - GitHub: [@HAYASAKA7](https://github.com/HAYASAKA7)
-- Project: [HAYA-DISK](https://github.com/HAYASAKA7/HAYA-DISK)
+- Project: [HAYA_DISK](https://github.com/HAYASAKA7/HAYA_DISK)
 
 ## 🙏 Acknowledgments
 
@@ -369,4 +520,3 @@ If you have any questions or issues, please open an issue on the GitHub reposito
 ---
 
 Made with ❤️ by HAYASAKA7
-

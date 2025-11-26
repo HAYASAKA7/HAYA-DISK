@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 
@@ -9,15 +10,44 @@ import (
 	"github.com/HAYASAKA7/HAYA_DISK/handlers"
 	"github.com/HAYASAKA7/HAYA_DISK/middleware"
 	"github.com/HAYASAKA7/HAYA_DISK/services"
+	"github.com/HAYASAKA7/HAYA_DISK/utils"
 )
+
+// autoMigrate runs migration automatically if needed
+func autoMigrate() {
+	// Check if users.json exists
+	if _, err := os.Stat(config.UsersFile); os.IsNotExist(err) {
+		return // No migration needed
+	}
+
+	// Check if database is empty (no users)
+	users, err := services.GetAllUsersDB()
+	if err != nil || len(users) > 0 {
+		return // Database already has data, skip migration
+	}
+
+	log.Println("Detected users.json - running automatic migration...")
+	if err := utils.MigrateFromJSON(); err != nil {
+		log.Printf("Warning: Auto-migration failed: %v", err)
+		log.Println("You can run the migration tool manually: ./migrate.exe")
+		return
+	}
+	log.Println("✓ Auto-migration completed successfully!")
+}
 
 func main() {
 	// Create necessary directories
 	os.MkdirAll(config.StorageDir, os.ModePerm)
 	os.MkdirAll(config.TemplatesDir, os.ModePerm)
 
-	// Load existing users
-	services.LoadUsers()
+	// Initialize database (replaces LoadUsers)
+	if err := services.InitDatabase(); err != nil {
+		log.Fatal("Failed to initialize database:", err)
+	}
+	defer services.CloseDatabase()
+
+	// Auto-migrate if users.json exists and database is empty
+	autoMigrate()
 
 	// Register HTTP handlers
 	http.HandleFunc("/", handlers.IndexHandler)

@@ -30,42 +30,28 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Get current folder from query parameter
 	currentFolder := r.URL.Query().Get("folder")
-
-	userStoragePath := services.GetUserStoragePath(username, user.UniqueCode)
-
-	// Build target path
-	var targetPath string
-	if currentFolder != "" && currentFolder != "/" {
-		targetPath = filepath.Join(userStoragePath, currentFolder)
-		// Security check
-		absPath, _ := filepath.Abs(targetPath)
-		absAllowed, _ := filepath.Abs(userStoragePath)
-		if !strings.HasPrefix(absPath, absAllowed) {
-			http.Error(w, "Unauthorized", http.StatusForbidden)
-			return
-		}
-	} else {
-		targetPath = userStoragePath
-		currentFolder = ""
+	if currentFolder == "" {
+		currentFolder = "/"
 	}
 
-	files, err := getFileList(targetPath, currentFolder)
+	// Get files from database
+	files, err := getFileList(username, currentFolder)
 	if err != nil {
 		http.Error(w, "Unable to list files", 500)
 		return
 	}
 
 	// Get all folders for move functionality
-	allFolders, _ := getAllFolders(userStoragePath, "")
+	allFolders, _ := getAllFoldersFromDB(username)
 
-	// Calculate storage statistics
-	storageStats := calculateStorageStats(userStoragePath)
+	// Calculate storage statistics from database
+	storageStats := calculateStorageStatsFromDB(username)
 
-	// Get recent files
-	recentFiles := getRecentFiles(userStoragePath)
+	// Get recent files from database
+	recentFiles := getRecentFilesFromDB(username)
 
 	// Determine if we're on the home page (no folder selected)
-	isHomePage := currentFolder == ""
+	isHomePage := currentFolder == "/" || currentFolder == ""
 
 	data := map[string]interface{}{
 		"files":         files,
@@ -85,69 +71,53 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, data)
 }
 
-// getFileList retrieves list of files and folders in a directory
-func getFileList(targetPath string, currentFolder string) ([]models.FileInfo, error) {
+// getFileList retrieves list of files and folders from database
+func getFileList(username string, currentFolder string) ([]models.FileInfo, error) {
 	var fileList []models.FileInfo
-	entries, err := os.ReadDir(targetPath)
+
+	// Normalize folder path
+	if currentFolder == "" {
+		currentFolder = "/"
+	}
+
+	// Get files from database
+	fileMetadata, err := services.GetUserFiles(username, currentFolder)
 	if err != nil {
 		return fileList, err
 	}
 
-	// Add folders first
-	for _, f := range entries {
-		if f.IsDir() {
-			info, _ := f.Info()
-			var folderPath string
-			if currentFolder != "" {
-				folderPath = filepath.Join(currentFolder, f.Name())
-			} else {
-				folderPath = f.Name()
-			}
+	// Convert database metadata to FileInfo
+	for _, meta := range fileMetadata {
+		ext := strings.ToLower(filepath.Ext(meta.Filename))
+		isImage := utils.IsImageFile(ext)
 
-			// Get folder size from cache or calculate if not cached
-			fullFolderPath := filepath.Join(targetPath, f.Name())
-			folderSize, cached := services.GetFolderSize(fullFolderPath)
-			if !cached {
-				// Calculate and cache the folder size
-				folderSize = services.RecalculateFolderSize(fullFolderPath, calculateFolderSize)
-			}
-
-			fileList = append(fileList, models.FileInfo{
-				Name:     f.Name(),
-				Size:     utils.FormatFileSize(folderSize),
-				Modified: info.ModTime().Format("2006-01-02 15:04"),
-				Icon:     "📁",
-				IsImage:  false,
-				IsDir:    true,
-				Path:     folderPath,
-			})
+		// Build relative path for display
+		var displayPath string
+		if meta.ParentPath == "/" || meta.ParentPath == "" {
+			displayPath = meta.Filename
+		} else {
+			displayPath = filepath.Join(meta.ParentPath, meta.Filename)
 		}
+
+		fileInfo := models.FileInfo{
+			Name:     meta.Filename,
+			Size:     utils.FormatFileSize(meta.FileSize),
+			Modified: meta.ModifiedAt.Format("2006-01-02 15:04"),
+			IsDir:    meta.IsDirectory,
+			Path:     displayPath,
+			IsImage:  isImage,
+			Ext:      ext,
+		}
+
+		if meta.IsDirectory {
+			fileInfo.Icon = "📁"
+		} else {
+			fileInfo.Icon = utils.GetFileIcon(ext)
+		}
+
+		fileList = append(fileList, fileInfo)
 	}
 
-	// Then add files
-	for _, f := range entries {
-		if !f.IsDir() {
-			info, _ := f.Info()
-			ext := strings.ToLower(filepath.Ext(f.Name()))
-			isImage := utils.IsImageFile(ext)
-			var filePath string
-			if currentFolder != "" {
-				filePath = filepath.Join(currentFolder, f.Name())
-			} else {
-				filePath = f.Name()
-			}
-			fileList = append(fileList, models.FileInfo{
-				Name:     f.Name(),
-				Size:     utils.FormatFileSize(info.Size()),
-				Modified: info.ModTime().Format("2006-01-02 15:04"),
-				Icon:     utils.GetFileIcon(ext),
-				IsImage:  isImage,
-				Ext:      ext,
-				IsDir:    false,
-				Path:     filePath,
-			})
-		}
-	}
 	return fileList, nil
 }
 
@@ -166,7 +136,7 @@ func calculateFolderSize(folderPath string) int64 {
 	return totalSize
 }
 
-// getAllFolders recursively gets all folders for the move functionality
+// getAllFolders recursively gets all folders for the move functionality (DEPRECATED - kept for compatibility)
 func getAllFolders(basePath string, prefix string) ([]string, error) {
 	var folders []string
 	folders = append(folders, "/") // Root folder
@@ -198,7 +168,30 @@ func getAllFolders(basePath string, prefix string) ([]string, error) {
 	return folders, nil
 }
 
-// calculateStorageStats analyzes storage usage by file type
+// getAllFoldersFromDB gets all folders from database for the move functionality
+func getAllFoldersFromDB(username string) ([]string, error) {
+	folders := []string{"/"}
+
+	folderMetadata, err := services.GetAllFoldersDB(username)
+	if err != nil {
+		return folders, err
+	}
+
+	for _, folder := range folderMetadata {
+		// Build folder display path
+		var folderPath string
+		if folder.ParentPath == "/" || folder.ParentPath == "" {
+			folderPath = folder.Filename
+		} else {
+			folderPath = filepath.Join(folder.ParentPath, folder.Filename)
+		}
+		folders = append(folders, folderPath)
+	}
+
+	return folders, nil
+}
+
+// calculateStorageStats analyzes storage usage by file type (DEPRECATED - kept for compatibility)
 func calculateStorageStats(basePath string) models.StorageStats {
 	stats := models.StorageStats{
 		FileTypes: []models.FileTypeStats{},
@@ -261,7 +254,68 @@ func calculateStorageStats(basePath string) models.StorageStats {
 	return stats
 }
 
-// getRecentFiles retrieves the 5 most recently modified files
+// calculateStorageStatsFromDB analyzes storage usage by file type using database
+func calculateStorageStatsFromDB(username string) models.StorageStats {
+	stats := models.StorageStats{
+		FileTypes: []models.FileTypeStats{},
+	}
+
+	typeMap := make(map[string]*models.FileTypeStats)
+	colorMap := map[string]string{
+		"Images":    "#4CAF50",
+		"Videos":    "#2196F3",
+		"Audio":     "#FF9800",
+		"Documents": "#9C27B0",
+		"Archives":  "#F44336",
+		"Code":      "#00BCD4",
+		"Others":    "#9E9E9E",
+	}
+
+	// Initialize categories
+	categories := []string{"Images", "Videos", "Audio", "Documents", "Archives", "Code", "Others"}
+	for _, cat := range categories {
+		typeMap[cat] = &models.FileTypeStats{
+			Type:  cat,
+			Color: colorMap[cat],
+		}
+	}
+
+	// Get all files from database (search with empty query to get all)
+	allFiles, err := services.SearchUserFiles(username, "")
+	if err == nil {
+		for _, file := range allFiles {
+			if !file.IsDirectory {
+				ext := strings.ToLower(filepath.Ext(file.Filename))
+				stats.TotalSize += file.FileSize
+
+				// Categorize file using utility function
+				category := utils.GetFileCategory(ext)
+				if stat, exists := typeMap[category]; exists {
+					stat.Size += file.FileSize
+					stat.Count++
+				}
+			}
+		}
+	}
+
+	// Calculate percentages and format sizes
+	stats.TotalSizeStr = utils.FormatFileSize(stats.TotalSize)
+
+	for _, cat := range categories {
+		stat := typeMap[cat]
+		if stat.Count > 0 {
+			stat.SizeStr = utils.FormatFileSize(stat.Size)
+			if stats.TotalSize > 0 {
+				stat.Percentage = float64(stat.Size) / float64(stats.TotalSize) * 100
+			}
+			stats.FileTypes = append(stats.FileTypes, *stat)
+		}
+	}
+
+	return stats
+}
+
+// getRecentFiles retrieves the 5 most recently modified files (DEPRECATED - kept for compatibility)
 func getRecentFiles(basePath string) []models.RecentFile {
 	type fileWithTime struct {
 		name    string
@@ -329,6 +383,52 @@ func getRecentFiles(basePath string) []models.RecentFile {
 			Icon:       utils.GetFileIcon(f.ext),
 			Size:       utils.FormatFileSize(f.size),
 			IsImage:    f.isImage,
+		})
+	}
+
+	return recentFiles
+}
+
+// getRecentFilesFromDB retrieves the 5 most recently modified files from database
+func getRecentFilesFromDB(username string) []models.RecentFile {
+	var recentFiles []models.RecentFile
+
+	// Query to get recent files, ordered by modified_at DESC
+	query := `SELECT filename, storage_path, parent_path, file_size, modified_at 
+			  FROM files WHERE username = ? AND is_directory = 0 
+			  ORDER BY modified_at DESC LIMIT 5`
+
+	rows, err := services.GetDB().Query(query, username)
+	if err != nil {
+		return recentFiles
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var filename, storagePath, parentPath string
+		var fileSize int64
+		var modifiedAt string
+
+		rows.Scan(&filename, &storagePath, &parentPath, &fileSize, &modifiedAt)
+
+		ext := strings.ToLower(filepath.Ext(filename))
+		isImage := utils.IsImageFile(ext)
+
+		// Build display path
+		var displayPath string
+		if parentPath == "/" || parentPath == "" {
+			displayPath = filename
+		} else {
+			displayPath = filepath.Join(parentPath, filename)
+		}
+
+		recentFiles = append(recentFiles, models.RecentFile{
+			Name:       filename,
+			Path:       displayPath,
+			FolderPath: parentPath,
+			Icon:       utils.GetFileIcon(ext),
+			Size:       utils.FormatFileSize(fileSize),
+			IsImage:    isImage,
 		})
 	}
 
