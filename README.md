@@ -380,11 +380,11 @@ The SQLite migration enables future features:
 
 If you're upgrading from an older version:
 
-1. **Automatic Migration**: Run the migration tool once
+1. **Automatic Migration**: The new main function is ready with auto-migration
 
    ```bash
-   go build -o migrate.exe ./cmd/migrate
-   ./migrate.exe
+   go build -o haya-disk.exe
+   ./haya-disk.exe
    ```
 
 2. **What Gets Migrated**:
@@ -520,3 +520,4 @@ If you have any questions or issues, please open an issue on the GitHub reposito
 ---
 
 Made with ❤️ by HAYASAKA7
+
