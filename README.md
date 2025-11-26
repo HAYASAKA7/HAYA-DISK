@@ -53,8 +53,8 @@ A modern, secure, and user-friendly file storage system built with Go. HAYA-DISK
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/HAYASAKA7/HAYA_DISK.git
-   cd HAYA_DISK
+   git clone https://github.com/HAYASAKA7/HAYA-DISK.git
+   cd HAYA-DISK
    ```
 
 2. **Build the application**
@@ -108,7 +108,7 @@ A modern, secure, and user-friendly file storage system built with Go. HAYA-DISK
 ## 📁 Project Structure
 
 ```text
-HAYA_DISK/
+HAYA-DISK/
 ├── main.go                    # Application entry point
 ├── go.mod                     # Go module definition
 ├── haya-disk.db              # SQLite database (auto-generated)
@@ -505,7 +505,7 @@ User data is saved safely even during concurrent operations:
 **HAYASAKA7**
 
 - GitHub: [@HAYASAKA7](https://github.com/HAYASAKA7)
-- Project: [HAYA_DISK](https://github.com/HAYASAKA7/HAYA_DISK)
+- Project: [HAYA-DISK](https://github.com/HAYASAKA7/HAYA-DISK)
 
 ## 🙏 Acknowledgments
 
@@ -520,4 +520,5 @@ If you have any questions or issues, please open an issue on the GitHub reposito
 ---
 
 Made with ❤️ by HAYASAKA7
+
 
