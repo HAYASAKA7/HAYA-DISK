@@ -32,4 +32,28 @@ go.work
 
 # Project-specific
 users.json
+users.json.tmp
 storage/
+
+# SQLite database files
+*.db
+*.db-shm
+*.db-wal
+haya-disk.db
+haya-disk.db-journal
+
+# Migration tool
+migrate.exe
+migrate
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Environment files
+.env
+.env.local
+
+# Backup files
+*.bak
+*.backup
