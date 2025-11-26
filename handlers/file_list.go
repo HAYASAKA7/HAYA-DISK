@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/HAYASAKA7/HAYA_DISK/config"
-	"github.com/HAYASAKA7/HAYA_DISK/middleware"
-	"github.com/HAYASAKA7/HAYA_DISK/models"
-	"github.com/HAYASAKA7/HAYA_DISK/services"
-	"github.com/HAYASAKA7/HAYA_DISK/utils"
+	"github.com/HAYASAKA7/HAYA-DISK/config"
+	"github.com/HAYASAKA7/HAYA-DISK/middleware"
+	"github.com/HAYASAKA7/HAYA-DISK/models"
+	"github.com/HAYASAKA7/HAYA-DISK/services"
+	"github.com/HAYASAKA7/HAYA-DISK/utils"
 )
 
 // ListHandler displays user's files
@@ -99,9 +99,17 @@ func getFileList(username string, currentFolder string) ([]models.FileInfo, erro
 			displayPath = filepath.Join(meta.ParentPath, meta.Filename)
 		}
 
+		// Calculate size - for folders, calculate recursively from database
+		var sizeToDisplay int64
+		if meta.IsDirectory {
+			sizeToDisplay = calculateFolderSize(username, displayPath)
+		} else {
+			sizeToDisplay = meta.FileSize
+		}
+
 		fileInfo := models.FileInfo{
 			Name:     meta.Filename,
-			Size:     utils.FormatFileSize(meta.FileSize),
+			Size:     utils.FormatFileSize(sizeToDisplay),
 			Modified: meta.ModifiedAt.Format("2006-01-02 15:04"),
 			IsDir:    meta.IsDirectory,
 			Path:     displayPath,
@@ -121,8 +129,17 @@ func getFileList(username string, currentFolder string) ([]models.FileInfo, erro
 	return fileList, nil
 }
 
-// calculateFolderSize calculates the total size of all files in a folder recursively
-func calculateFolderSize(folderPath string) int64 {
+// calculateFolderSize calculates the total size of all files in a folder recursively using database
+func calculateFolderSize(username, folderPath string) int64 {
+	size, err := services.CalculateFolderSizeDB(username, folderPath)
+	if err != nil {
+		return 0
+	}
+	return size
+}
+
+// calculateFolderSizeOld calculates the total size of all files in a folder recursively (DEPRECATED - filesystem based)
+func calculateFolderSizeOld(folderPath string) int64 {
 	var totalSize int64
 	filepath.Walk(folderPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {

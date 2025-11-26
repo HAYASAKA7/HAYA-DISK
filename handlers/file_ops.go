@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/HAYASAKA7/HAYA_DISK/config"
-	"github.com/HAYASAKA7/HAYA_DISK/middleware"
-	"github.com/HAYASAKA7/HAYA_DISK/services"
-	"github.com/HAYASAKA7/HAYA_DISK/utils"
+	"github.com/HAYASAKA7/HAYA-DISK/config"
+	"github.com/HAYASAKA7/HAYA-DISK/middleware"
+	"github.com/HAYASAKA7/HAYA-DISK/services"
+	"github.com/HAYASAKA7/HAYA-DISK/utils"
 )
 
 // UploadHandler handles file uploads
@@ -319,19 +319,21 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	// Get relative path for database operations
 	relativePath, _ := filepath.Rel(userStoragePath, targetPath)
 
-	// Get file/folder size before deletion
+	// Get file/folder size before deletion from database
 	var deletedSize int64
-	if info, err := os.Stat(targetPath); err == nil {
-		if info.IsDir() {
-			// Calculate folder size
-			deletedSize = calculateFolderSizeInOps(targetPath)
+	// Check if it's a directory from database
+	fileMetadata, err := services.GetFileByPath(username, relativePath)
+	if err == nil && fileMetadata != nil {
+		if fileMetadata.IsDirectory {
+			// Calculate folder size from database
+			deletedSize, _ = services.CalculateFolderSizeDB(username, relativePath)
 		} else {
-			deletedSize = info.Size()
+			deletedSize = fileMetadata.FileSize
 		}
 	}
 
 	// Delete from database first (including children if folder)
-	err := services.DeleteFileMetadataRecursive(username, relativePath)
+	err = services.DeleteFileMetadataRecursive(username, relativePath)
 	if err != nil {
 		http.Error(w, "Database delete error", 500)
 		return
@@ -604,7 +606,8 @@ func getFolderList(basePath string) ([]string, error) {
 	return folders, nil
 }
 
-// calculateFolderSizeInOps calculates folder size for file operations
+// calculateFolderSizeInOps calculates folder size for file operations (DEPRECATED - now uses database)
+// Kept for backward compatibility only
 func calculateFolderSizeInOps(folderPath string) int64 {
 	var totalSize int64
 	filepath.Walk(folderPath, func(path string, info os.FileInfo, err error) error {

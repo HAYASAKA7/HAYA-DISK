@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/HAYASAKA7/HAYA_DISK/config"
-	"github.com/HAYASAKA7/HAYA_DISK/middleware"
-	"github.com/HAYASAKA7/HAYA_DISK/models"
-	"github.com/HAYASAKA7/HAYA_DISK/services"
-	"github.com/HAYASAKA7/HAYA_DISK/utils"
+	"github.com/HAYASAKA7/HAYA-DISK/config"
+	"github.com/HAYASAKA7/HAYA-DISK/middleware"
+	"github.com/HAYASAKA7/HAYA-DISK/models"
+	"github.com/HAYASAKA7/HAYA-DISK/services"
+	"github.com/HAYASAKA7/HAYA-DISK/utils"
 )
 
 // IndexHandler redirects to login or list based on session

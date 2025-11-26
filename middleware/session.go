@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/HAYASAKA7/HAYA_DISK/config"
-	"github.com/HAYASAKA7/HAYA_DISK/models"
-	"github.com/HAYASAKA7/HAYA_DISK/services"
+	"github.com/HAYASAKA7/HAYA-DISK/config"
+	"github.com/HAYASAKA7/HAYA-DISK/models"
+	"github.com/HAYASAKA7/HAYA-DISK/services"
 )
 
 // GetSessionCookie retrieves the session ID from cookies

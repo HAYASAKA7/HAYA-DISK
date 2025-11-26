@@ -1,4 +1,4 @@
-module github.com/HAYASAKA7/HAYA_DISK
+module github.com/HAYASAKA7/HAYA-DISK
 
 go 1.24.0
 

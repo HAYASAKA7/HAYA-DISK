@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/HAYASAKA7/HAYA_DISK/models"
+	"github.com/HAYASAKA7/HAYA-DISK/models"
 )
 
 var (

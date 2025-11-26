@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/HAYASAKA7/HAYA_DISK/config"
-	"github.com/HAYASAKA7/HAYA_DISK/models"
-	"github.com/HAYASAKA7/HAYA_DISK/services"
+	"github.com/HAYASAKA7/HAYA-DISK/config"
+	"github.com/HAYASAKA7/HAYA-DISK/models"
+	"github.com/HAYASAKA7/HAYA-DISK/services"
 )
 
 // MigrateFromJSON migrates users from users.json and files from storage to database

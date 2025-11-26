@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/HAYASAKA7/HAYA_DISK/config"
-	"github.com/HAYASAKA7/HAYA_DISK/handlers"
-	"github.com/HAYASAKA7/HAYA_DISK/middleware"
-	"github.com/HAYASAKA7/HAYA_DISK/services"
-	"github.com/HAYASAKA7/HAYA_DISK/utils"
+	"github.com/HAYASAKA7/HAYA-DISK/config"
+	"github.com/HAYASAKA7/HAYA-DISK/handlers"
+	"github.com/HAYASAKA7/HAYA-DISK/middleware"
+	"github.com/HAYASAKA7/HAYA-DISK/services"
+	"github.com/HAYASAKA7/HAYA-DISK/utils"
 )
 
 // autoMigrate runs migration automatically if needed

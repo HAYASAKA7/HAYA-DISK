@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/HAYASAKA7/HAYA_DISK/models"
+	"github.com/HAYASAKA7/HAYA-DISK/models"
 	_ "modernc.org/sqlite"
 )
 
@@ -449,4 +449,31 @@ func GetAllFoldersDB(username string) ([]models.FileMetadata, error) {
 	}
 
 	return folders, nil
+}
+
+// CalculateFolderSizeDB calculates the total size of all files in a folder recursively from database
+func CalculateFolderSizeDB(username, folderPath string) (int64, error) {
+	// Normalize folder path
+	if folderPath == "" {
+		folderPath = "/"
+	}
+
+	// Query to sum all file sizes in this folder and subfolders
+	// We need to match the folder path and all subfolders starting with this path
+	query := `SELECT COALESCE(SUM(file_size), 0) FROM files 
+			  WHERE username = ? AND is_directory = 0 
+			  AND (parent_path = ? OR parent_path LIKE ?)`
+
+	var totalSize int64
+	likePattern := folderPath
+	if folderPath == "/" {
+		// For root, match everything
+		err := db.QueryRow(query, username, folderPath, "%").Scan(&totalSize)
+		return totalSize, err
+	} else {
+		// For subfolders, match exact path or paths starting with folderPath/
+		likePattern = folderPath + "/%"
+		err := db.QueryRow(query, username, folderPath, likePattern).Scan(&totalSize)
+		return totalSize, err
+	}
 }
