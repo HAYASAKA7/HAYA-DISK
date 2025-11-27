@@ -54,7 +54,7 @@
                     <div class="storage-legend">
                         {{range .storageStats.FileTypes}}
                         <div class="legend-item" data-type="{{.Type}}" data-size="{{.Size}}" data-percentage="{{.Percentage}}" data-color="{{.Color}}">
-                            <div class="legend-color" style="background-color: {{.Color}}"></div>
+                            <div class="legend-color" data-color="{{.Color}}"></div>
                             <div class="legend-info">
                                 <div class="legend-type">{{.Type}}</div>
                                 <div class="legend-details">
@@ -599,8 +599,12 @@
             });
         });
 
-        // Render chart when page loads
+        // Set legend colors from data-color attribute
         document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.legend-color').forEach(function(el) {
+                const color = el.getAttribute('data-color');
+                if (color) el.style.backgroundColor = color;
+            });
             renderStorageChart();
             scrollToFileCard();
         });
