@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/HAYASAKA7/HAYA-DISK/config"
 	"github.com/HAYASAKA7/HAYA-DISK/middleware"
@@ -553,8 +554,8 @@ func MoveFileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update database: change storage_path and parent_path
-	query := `UPDATE files SET storage_path = ?, parent_path = ?, modified_at = datetime('now') WHERE username = ? AND storage_path = ?`
-	_, err = services.GetDB().Exec(query, targetRelPath, targetFolder, username, sourceRelPath)
+	query := `UPDATE files SET storage_path = ?, parent_path = ?, modified_at = ? WHERE username = ? AND storage_path = ?`
+	_, err = services.GetDB().Exec(query, targetRelPath, targetFolder, time.Now(), username, sourceRelPath)
 	if err != nil {
 		// Rollback file move on database error
 		os.Rename(targetPath, sourcePath)
