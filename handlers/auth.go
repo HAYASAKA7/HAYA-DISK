@@ -8,6 +8,7 @@ import (
 
 	"github.com/HAYASAKA7/HAYA-DISK/config"
 	"github.com/HAYASAKA7/HAYA-DISK/middleware"
+	"github.com/HAYASAKA7/HAYA-DISK/models"
 	"github.com/HAYASAKA7/HAYA-DISK/services"
 	"github.com/HAYASAKA7/HAYA-DISK/utils"
 )
@@ -21,10 +22,22 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
-		credential := r.FormValue("credential") // Can be email or phone
+		loginType := r.FormValue("login_type") // "email" or "phone"
 		password := r.FormValue("password")
 
-		user := services.FindUserByCredential(credential)
+		var user *models.User
+
+		if loginType == "phone" {
+			phone := strings.TrimSpace(r.FormValue("phone"))
+			phoneRegion := strings.TrimSpace(r.FormValue("phone_region"))
+			// Clean phone number
+			phone = utils.CleanPhoneNumber(phone)
+			user = services.FindUserByPhoneAndRegion(phone, phoneRegion)
+		} else {
+			// Default to email login
+			email := strings.TrimSpace(r.FormValue("email"))
+			user = services.FindUserByEmail(email)
+		}
 
 		if user == nil || user.Password != password {
 			tmpl, _ := template.ParseFiles(filepath.Join(config.TemplatesDir, "login.html"))

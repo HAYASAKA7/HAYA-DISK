@@ -187,7 +187,27 @@
 
                     <div class="form-group">
                         <label for="settingsPhone">Phone Number</label>
-                        <input type="tel" id="settingsPhone" placeholder="10-15 digits">
+                        <div class="phone-input-group">
+                            <select id="settingsPhoneRegion" class="phone-region-select" title="Select phone region">
+                                <option value="CN">+86</option>
+                                <option value="US">+1</option>
+                                <option value="CA">+1</option>
+                                <option value="UK">+44</option>
+                                <option value="JP">+81</option>
+                                <option value="KR">+82</option>
+                                <option value="TW">+886</option>
+                                <option value="HK">+852</option>
+                                <option value="SG">+65</option>
+                                <option value="AU">+61</option>
+                                <option value="DE">+49</option>
+                                <option value="FR">+33</option>
+                                <option value="IN">+91</option>
+                                <option value="RU">+7</option>
+                                <option value="BR">+55</option>
+                                <option value="MX">+52</option>
+                            </select>
+                            <input type="tel" id="settingsPhone" placeholder="Phone number">
+                        </div>
                         <small>Current: <strong id="currentPhone">Not set</strong></small>
                     </div>
 
@@ -274,7 +294,14 @@
                     // Display current values
                     document.getElementById('currentUsername').textContent = data.username || 'N/A';
                     document.getElementById('currentEmail').textContent = data.email || 'Not set';
-                    document.getElementById('currentPhone').textContent = data.phone || 'Not set';
+                    
+                    // Display phone with region if available
+                    if (data.phone) {
+                        const regionDisplay = data.phone_region ? `(${data.phone_region}) ` : '';
+                        document.getElementById('currentPhone').textContent = regionDisplay + data.phone;
+                    } else {
+                        document.getElementById('currentPhone').textContent = 'Not set';
+                    }
                     
                     // Pre-fill form fields with current values
                     document.getElementById('settingsUsername').value = '';
@@ -282,7 +309,12 @@
                     document.getElementById('settingsEmail').value = '';
                     document.getElementById('settingsEmail').placeholder = data.email || 'your@email.com';
                     document.getElementById('settingsPhone').value = '';
-                    document.getElementById('settingsPhone').placeholder = data.phone || '10-15 digits';
+                    document.getElementById('settingsPhone').placeholder = data.phone || 'Phone number';
+                    
+                    // Set phone region if available
+                    if (data.phone_region) {
+                        document.getElementById('settingsPhoneRegion').value = data.phone_region;
+                    }
                 }
             } catch (error) {
                 console.error('Failed to fetch user info:', error);
@@ -359,6 +391,7 @@
             const username = document.getElementById('settingsUsername').value.trim();
             const email = document.getElementById('settingsEmail').value.trim();
             const phone = document.getElementById('settingsPhone').value.trim();
+            const phoneRegion = document.getElementById('settingsPhoneRegion').value;
             const messageDiv = document.getElementById('settingsMessage');
 
             // Check if at least one field is filled
@@ -378,7 +411,8 @@
                     body: JSON.stringify({
                         username: username,
                         email: email,
-                        phone: phone
+                        phone: phone,
+                        phone_region: phone ? phoneRegion : ''
                     })
                 });
 

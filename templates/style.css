@@ -937,6 +937,38 @@ body {
     margin-bottom: 5px;
 }
 
+/* Phone Input Group for Settings */
+#settingsForm .phone-input-group {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+#settingsForm .phone-region-select {
+    width: 80px;
+    min-width: 80px;
+    padding: 12px 8px;
+    border: 1px solid #e0e3e7;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+#settingsForm .phone-region-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#settingsForm .phone-input-group input {
+    flex: 1;
+    min-width: 0;
+    margin-bottom: 0;
+}
+
 /* Widgets Container */
 .widgets-container {
     display: flex;

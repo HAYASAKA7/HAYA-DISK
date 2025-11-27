@@ -81,6 +81,12 @@ func APIUpdateProfileHandler(w http.ResponseWriter, r *http.Request) {
 	newUsername := strings.TrimSpace(req.Username)
 	email := strings.TrimSpace(req.Email)
 	phone := strings.TrimSpace(req.Phone)
+	phoneRegion := strings.TrimSpace(req.PhoneRegion)
+
+	// Clean phone number if provided
+	if phone != "" {
+		phone = utils.CleanPhoneNumber(phone)
+	}
 
 	// Validation - at least one field must be provided
 	if newUsername == "" && email == "" && phone == "" {
@@ -103,15 +109,15 @@ func APIUpdateProfileHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if email != "" && !utils.IsValidEmail(email) {
+	if email != "" && !utils.ValidateEmail(email) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(models.UpdateProfileResponse{Success: false, Message: "Invalid email format"})
 		return
 	}
 
-	if phone != "" && !utils.IsValidPhone(phone) {
+	if phone != "" && !utils.ValidatePhone(phone, phoneRegion) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(models.UpdateProfileResponse{Success: false, Message: "Phone must be 10-15 digits"})
+		json.NewEncoder(w).Encode(models.UpdateProfileResponse{Success: false, Message: utils.GetPhoneValidationError(phoneRegion)})
 		return
 	}
 
@@ -129,10 +135,10 @@ func APIUpdateProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if phone already exists (and it's not the user's current phone)
-	if phone != "" && phone != user.Phone && services.PhoneExists(phone) {
+	// Check if phone+region already exists (and it's not the user's current phone)
+	if phone != "" && (phone != user.Phone || phoneRegion != user.PhoneRegion) && services.PhoneAndRegionExists(phone, phoneRegion) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(models.UpdateProfileResponse{Success: false, Message: "Phone number already registered"})
+		json.NewEncoder(w).Encode(models.UpdateProfileResponse{Success: false, Message: "Phone number already registered in this region"})
 		return
 	}
 
@@ -150,9 +156,9 @@ func APIUpdateProfileHandler(w http.ResponseWriter, r *http.Request) {
 		middleware.UpdateSession(r, newUsername)
 	}
 
-	// Update user profile (email and phone)
+	// Update user profile (email, phone, and phone_region)
 	if email != "" || phone != "" {
-		if err := services.UpdateUserProfile(updatedUsername, email, phone); err != nil {
+		if err := services.UpdateUserProfileWithRegion(updatedUsername, email, phone, phoneRegion); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(models.UpdateProfileResponse{Success: false, Message: "Update failed"})
 			return
@@ -186,8 +192,9 @@ func APIGetUserInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(models.UserInfoResponse{
-		Username: user.Username,
-		Email:    user.Email,
-		Phone:    user.Phone,
+		Username:    user.Username,
+		Email:       user.Email,
+		Phone:       user.Phone,
+		PhoneRegion: user.PhoneRegion,
 	})
 }

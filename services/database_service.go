@@ -190,6 +190,31 @@ func GetUserByPhoneDB(phone string) (*models.User, error) {
 	return &user, nil
 }
 
+// GetUserByPhoneAndRegionDB retrieves a user by phone number and region
+func GetUserByPhoneAndRegionDB(phone, phoneRegion string) (*models.User, error) {
+	if phone == "" {
+		return nil, nil
+	}
+
+	query := `SELECT username, email, phone, COALESCE(phone_region, ''), password, unique_code, created_at, login_type 
+			  FROM users WHERE phone = ? AND phone_region = ?`
+
+	var user models.User
+	err := db.QueryRow(query, phone, phoneRegion).Scan(
+		&user.Username, &user.Email, &user.Phone, &user.PhoneRegion, &user.Password,
+		&user.UniqueCode, &user.CreatedAt, &user.LoginType,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user by phone and region: %w", err)
+	}
+
+	return &user, nil
+}
+
 // EmailExistsDB checks if an email already exists in the database
 func EmailExistsDB(email string) (bool, error) {
 	if email == "" {
@@ -217,6 +242,22 @@ func PhoneExistsDB(phone string) (bool, error) {
 	err := db.QueryRow(query, phone).Scan(&count)
 	if err != nil {
 		return false, fmt.Errorf("failed to check phone existence: %w", err)
+	}
+
+	return count > 0, nil
+}
+
+// PhoneAndRegionExistsDB checks if a phone number with specific region already exists
+func PhoneAndRegionExistsDB(phone, phoneRegion string) (bool, error) {
+	if phone == "" {
+		return false, nil
+	}
+
+	var count int
+	query := `SELECT COUNT(*) FROM users WHERE phone = ? AND phone_region = ?`
+	err := db.QueryRow(query, phone, phoneRegion).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("failed to check phone and region existence: %w", err)
 	}
 
 	return count > 0, nil

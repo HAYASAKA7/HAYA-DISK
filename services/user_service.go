@@ -44,6 +44,24 @@ func FindUserByCredential(credential string) *models.User {
 	return nil
 }
 
+// FindUserByEmail finds a user by email
+func FindUserByEmail(email string) *models.User {
+	if email == "" {
+		return nil
+	}
+	user, _ := GetUserByEmailDB(email)
+	return user
+}
+
+// FindUserByPhoneAndRegion finds a user by phone number and region
+func FindUserByPhoneAndRegion(phone, phoneRegion string) *models.User {
+	if phone == "" {
+		return nil
+	}
+	user, _ := GetUserByPhoneAndRegionDB(phone, phoneRegion)
+	return user
+}
+
 // EmailExists checks if email is already registered
 func EmailExists(email string) bool {
 	exists, _ := EmailExistsDB(email)
@@ -53,6 +71,12 @@ func EmailExists(email string) bool {
 // PhoneExists checks if phone is already registered
 func PhoneExists(phone string) bool {
 	exists, _ := PhoneExistsDB(phone)
+	return exists
+}
+
+// PhoneAndRegionExists checks if phone+region combination is already registered
+func PhoneAndRegionExists(phone, phoneRegion string) bool {
+	exists, _ := PhoneAndRegionExistsDB(phone, phoneRegion)
 	return exists
 }
 
@@ -88,6 +112,11 @@ func CreateUser(username, email, phone, phoneRegion, password string) (*models.U
 
 // UpdateUserProfile updates user's email and phone
 func UpdateUserProfile(username, email, phone string) error {
+	return UpdateUserProfileWithRegion(username, email, phone, "")
+}
+
+// UpdateUserProfileWithRegion updates user's email, phone, and phone region
+func UpdateUserProfileWithRegion(username, email, phone, phoneRegion string) error {
 	// Get user from database
 	user, err := GetUserByUsernameDB(username)
 	if err != nil {
@@ -103,6 +132,7 @@ func UpdateUserProfile(username, email, phone string) error {
 	}
 	if phone != "" {
 		user.Phone = phone
+		user.PhoneRegion = phoneRegion
 	}
 
 	// Update login type
@@ -115,8 +145,8 @@ func UpdateUserProfile(username, email, phone string) error {
 	}
 
 	// Update in database
-	query := `UPDATE users SET email = ?, phone = ?, login_type = ? WHERE username = ?`
-	_, err = GetDB().Exec(query, user.Email, user.Phone, user.LoginType, username)
+	query := `UPDATE users SET email = ?, phone = ?, phone_region = ?, login_type = ? WHERE username = ?`
+	_, err = GetDB().Exec(query, user.Email, user.Phone, user.PhoneRegion, user.LoginType, username)
 	return err
 }
 
