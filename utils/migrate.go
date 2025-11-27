@@ -69,11 +69,12 @@ func migrateUsers() error {
 			createdAt = time.Now()
 		}
 
-		// Insert user
+		// Insert user (with empty phone_region for legacy data)
 		err = services.CreateUserDB(
 			user.Username,
 			user.Email,
 			user.Phone,
+			"", // phone_region - empty for legacy migrated users
 			user.Password,
 			user.UniqueCode,
 			createdAt,

@@ -13,6 +13,7 @@ A modern, secure, and user-friendly file storage system built with Go. HAYA-DISK
 - **Session Management**: Secure session handling with automatic expiration
 - **Profile Management**: Update display name and password through settings
 - **SQLite Database**: All user data stored in secure, fast SQLite database
+- **Input Validation**: Email format validation and region-based phone number validation
 
 ### 📂 File Management
 - **File Upload**: Drag-and-drop or click-to-upload interface
@@ -241,6 +242,56 @@ Copy-Item "restore_temp/haya-disk.db" -Destination "." -Force
 Copy-Item "restore_temp/storage" -Destination "." -Recurse -Force
 Remove-Item "restore_temp" -Recurse
 ./HAYA-DISK.exe
+```
+
+## 📱 Input Validation
+
+HAYA-DISK validates user input during registration to ensure data integrity.
+
+### Email Validation
+
+- Standard RFC 5322 email format validation
+- Format: `username@domain.tld`
+- Examples: `user@example.com`, `john.doe@company.org`
+
+### Phone Number Validation
+
+Phone numbers are validated based on the selected region. Users must select their region from a dropdown, and the phone number format is validated accordingly.
+
+#### Supported Regions
+
+| Region | Country | Code | Format | Example |
+|--------|---------|------|--------|---------|
+| CN | China | +86 | 11 digits, starts with 1 | 13812345678 |
+| US | United States | +1 | 10 digits | 2025551234 |
+| CA | Canada | +1 | 10 digits | 4165551234 |
+| UK | United Kingdom | +44 | 10 digits, starts with 7 | 7911123456 |
+| JP | Japan | +81 | 10 digits | 9012345678 |
+| KR | South Korea | +82 | 10-11 digits | 01012345678 |
+| TW | Taiwan | +886 | 9 digits, starts with 9 | 912345678 |
+| HK | Hong Kong | +852 | 8 digits | 51234567 |
+| SG | Singapore | +65 | 8 digits | 81234567 |
+| AU | Australia | +61 | 9 digits, starts with 4 | 412345678 |
+| DE | Germany | +49 | 10-11 digits | 15123456789 |
+| FR | France | +33 | 9 digits | 612345678 |
+| IN | India | +91 | 10 digits | 9123456789 |
+| RU | Russia | +7 | 10 digits | 9123456789 |
+| BR | Brazil | +55 | 10-11 digits | 11912345678 |
+| MX | Mexico | +52 | 10 digits | 5512345678 |
+
+### Adding More Regions
+
+To add support for additional regions, edit `utils/validation.go` and add entries to the `PhoneRegions` map:
+
+```go
+"XX": {
+    Name:      "Country Name",
+    Code:      "+XX",
+    Pattern:   `^regex_pattern$`,
+    Example:   "1234567890",
+    MinLength: 10,
+    MaxLength: 10,
+},
 ```
 
 ## 🎯 Usage

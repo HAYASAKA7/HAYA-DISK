@@ -4,13 +4,14 @@ import "time"
 
 // User represents a user account
 type User struct {
-	Username   string `json:"username"`
-	Email      string `json:"email"`
-	Phone      string `json:"phone"`
-	Password   string `json:"password"`
-	UniqueCode string `json:"unique_code"`
-	CreatedAt  string `json:"created_at"`
-	LoginType  string `json:"login_type"` // "email", "phone", or "both"
+	Username    string `json:"username"`
+	Email       string `json:"email"`
+	Phone       string `json:"phone"`
+	PhoneRegion string `json:"phone_region"` // Region code for phone (e.g., "CN", "US")
+	Password    string `json:"password"`
+	UniqueCode  string `json:"unique_code"`
+	CreatedAt   string `json:"created_at"`
+	LoginType   string `json:"login_type"` // "email", "phone", or "both"
 }
 
 // Session represents an active user session

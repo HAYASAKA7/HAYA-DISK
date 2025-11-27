@@ -5,6 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HAYA-DISK - Register</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .phone-input-group {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .phone-input-group select {
+            flex: 0 0 100px;
+            min-width: 100px;
+            max-width: 100px;
+            padding: 12px 8px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fff;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .phone-input-group input {
+            flex: 1;
+            min-width: 0;
+            box-sizing: border-box;
+        }
+        @media (max-width: 500px) {
+            .phone-input-group {
+                flex-direction: column;
+            }
+            .phone-input-group select {
+                flex: none;
+                width: 100%;
+                max-width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="auth-container">
@@ -23,17 +57,37 @@
             <form class="auth-form" method="POST">
                 <div class="form-group">
                     <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required placeholder="Choose a username">
+                    <input type="text" id="username" name="username" required placeholder="Choose a username" value="{{.username}}">
                 </div>
 
                 <div class="form-group">
                     <label for="email">Email Address <span class="optional">(optional)</span></label>
-                    <input type="email" id="email" name="email" placeholder="your@email.com">
+                    <input type="email" id="email" name="email" placeholder="your@email.com" value="{{.email}}">
                 </div>
 
                 <div class="form-group">
                     <label for="phone">Phone Number <span class="optional">(optional)</span></label>
-                    <input type="tel" id="phone" name="phone" placeholder="10-15 digits (no special characters)">
+                    <div class="phone-input-group">
+                        <select id="phone_region" name="phone_region" title="Select region">
+                            <option value="CN" {{if eq .phone_region "CN"}}selected{{end}}>CN +86</option>
+                            <option value="US" {{if eq .phone_region "US"}}selected{{end}}>US +1</option>
+                            <option value="CA" {{if eq .phone_region "CA"}}selected{{end}}>CA +1</option>
+                            <option value="UK" {{if eq .phone_region "UK"}}selected{{end}}>UK +44</option>
+                            <option value="JP" {{if eq .phone_region "JP"}}selected{{end}}>JP +81</option>
+                            <option value="KR" {{if eq .phone_region "KR"}}selected{{end}}>KR +82</option>
+                            <option value="TW" {{if eq .phone_region "TW"}}selected{{end}}>TW +886</option>
+                            <option value="HK" {{if eq .phone_region "HK"}}selected{{end}}>HK +852</option>
+                            <option value="SG" {{if eq .phone_region "SG"}}selected{{end}}>SG +65</option>
+                            <option value="AU" {{if eq .phone_region "AU"}}selected{{end}}>AU +61</option>
+                            <option value="DE" {{if eq .phone_region "DE"}}selected{{end}}>DE +49</option>
+                            <option value="FR" {{if eq .phone_region "FR"}}selected{{end}}>FR +33</option>
+                            <option value="IN" {{if eq .phone_region "IN"}}selected{{end}}>IN +91</option>
+                            <option value="RU" {{if eq .phone_region "RU"}}selected{{end}}>RU +7</option>
+                            <option value="BR" {{if eq .phone_region "BR"}}selected{{end}}>BR +55</option>
+                            <option value="MX" {{if eq .phone_region "MX"}}selected{{end}}>MX +52</option>
+                        </select>
+                        <input type="tel" id="phone" name="phone" placeholder="Phone number" value="{{.phone}}">
+                    </div>
                 </div>
 
                 <div class="form-group info-box">

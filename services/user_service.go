@@ -62,7 +62,7 @@ func PhoneExists(phone string) bool {
 }
 
 // CreateUser creates and saves a new user
-func CreateUser(username, email, phone, password string) (*models.User, error) {
+func CreateUser(username, email, phone, phoneRegion, password string) (*models.User, error) {
 	uniqueCode := GenerateUniqueCode()
 
 	// Determine login type
@@ -78,7 +78,7 @@ func CreateUser(username, email, phone, password string) (*models.User, error) {
 	createdAt := time.Now()
 
 	// Create user in database
-	err := CreateUserDB(username, email, phone, password, uniqueCode, createdAt, loginType)
+	err := CreateUserDB(username, email, phone, phoneRegion, password, uniqueCode, createdAt, loginType)
 	if err != nil {
 		return nil, err
 	}

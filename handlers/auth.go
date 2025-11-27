@@ -53,12 +53,23 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Prepare template data with phone regions
+	templateData := map[string]interface{}{
+		"PhoneRegions": utils.GetAllPhoneRegions(),
+	}
+
 	if r.Method == http.MethodPost {
 		username := strings.TrimSpace(r.FormValue("username"))
 		email := strings.TrimSpace(r.FormValue("email"))
 		phone := strings.TrimSpace(r.FormValue("phone"))
+		phoneRegion := strings.TrimSpace(r.FormValue("phone_region"))
 		password := r.FormValue("password")
 		confirmPassword := r.FormValue("confirm_password")
+
+		// Clean phone number
+		if phone != "" {
+			phone = utils.CleanPhoneNumber(phone)
+		}
 
 		// Validation
 		var errorMsg string
@@ -66,10 +77,10 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			errorMsg = "Username and password are required"
 		} else if email == "" && phone == "" {
 			errorMsg = "Please provide either email or phone number"
-		} else if email != "" && !utils.IsValidEmail(email) {
-			errorMsg = "Invalid email format"
-		} else if phone != "" && !utils.IsValidPhone(phone) {
-			errorMsg = "Phone must be 10-15 digits"
+		} else if email != "" && !utils.ValidateEmail(email) {
+			errorMsg = "Invalid email format. Please enter a valid email address."
+		} else if phone != "" && !utils.ValidatePhone(phone, phoneRegion) {
+			errorMsg = utils.GetPhoneValidationError(phoneRegion)
 		} else if password != confirmPassword {
 			errorMsg = "Passwords do not match"
 		} else if email != "" && services.EmailExists(email) {
@@ -79,16 +90,22 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if errorMsg != "" {
+			templateData["error"] = errorMsg
+			templateData["username"] = username
+			templateData["email"] = email
+			templateData["phone"] = phone
+			templateData["phone_region"] = phoneRegion
 			tmpl, _ := template.ParseFiles(filepath.Join(config.TemplatesDir, "register.html"))
-			tmpl.Execute(w, map[string]string{"error": errorMsg})
+			tmpl.Execute(w, templateData)
 			return
 		}
 
-		// Create user
-		_, err := services.CreateUser(username, email, phone, password)
+		// Create user with phone region
+		_, err := services.CreateUser(username, email, phone, phoneRegion, password)
 		if err != nil {
+			templateData["error"] = "Registration failed"
 			tmpl, _ := template.ParseFiles(filepath.Join(config.TemplatesDir, "register.html"))
-			tmpl.Execute(w, map[string]string{"error": "Registration failed"})
+			tmpl.Execute(w, templateData)
 			return
 		}
 
@@ -102,7 +119,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Template error", 500)
 		return
 	}
-	tmpl.Execute(w, nil)
+	tmpl.Execute(w, templateData)
 }
 
 // LogoutHandler handles user logout

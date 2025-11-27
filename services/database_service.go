@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/HAYASAKA7/HAYA-DISK/models"
@@ -32,6 +33,7 @@ func InitDatabase() error {
 		username TEXT NOT NULL UNIQUE,
 		email TEXT,
 		phone TEXT,
+		phone_region TEXT,
 		password TEXT NOT NULL,
 		unique_code TEXT NOT NULL UNIQUE,
 		created_at DATETIME NOT NULL,
@@ -68,7 +70,25 @@ func InitDatabase() error {
 		return fmt.Errorf("failed to create schema: %w", err)
 	}
 
+	// Run migrations for existing databases
+	if err = runMigrations(); err != nil {
+		log.Printf("Warning: Migration error (may be safe to ignore): %v", err)
+	}
+
 	log.Println("Database initialized successfully")
+	return nil
+}
+
+// runMigrations handles database schema migrations for existing databases
+func runMigrations() error {
+	// Migration: Add phone_region column if it doesn't exist
+	_, err := db.Exec(`ALTER TABLE users ADD COLUMN phone_region TEXT`)
+	if err != nil {
+		// Ignore error if column already exists
+		if !strings.Contains(err.Error(), "duplicate column") && !strings.Contains(err.Error(), "already exists") {
+			// Log but don't fail - column might already exist
+		}
+	}
 	return nil
 }
 
@@ -88,11 +108,11 @@ func CloseDatabase() error {
 // ==================== USER DATABASE OPERATIONS ====================
 
 // CreateUserDB creates a new user in the database
-func CreateUserDB(username, email, phone, password, uniqueCode string, createdAt time.Time, loginType string) error {
-	query := `INSERT INTO users (username, email, phone, password, unique_code, created_at, login_type) 
-			  VALUES (?, ?, ?, ?, ?, ?, ?)`
+func CreateUserDB(username, email, phone, phoneRegion, password, uniqueCode string, createdAt time.Time, loginType string) error {
+	query := `INSERT INTO users (username, email, phone, phone_region, password, unique_code, created_at, login_type) 
+			  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
-	_, err := db.Exec(query, username, email, phone, password, uniqueCode, createdAt, loginType)
+	_, err := db.Exec(query, username, email, phone, phoneRegion, password, uniqueCode, createdAt, loginType)
 	if err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
@@ -101,12 +121,12 @@ func CreateUserDB(username, email, phone, password, uniqueCode string, createdAt
 
 // GetUserByUsernameDB retrieves a user by username
 func GetUserByUsernameDB(username string) (*models.User, error) {
-	query := `SELECT username, email, phone, password, unique_code, created_at, login_type 
+	query := `SELECT username, email, phone, COALESCE(phone_region, ''), password, unique_code, created_at, login_type 
 			  FROM users WHERE username = ?`
 
 	var user models.User
 	err := db.QueryRow(query, username).Scan(
-		&user.Username, &user.Email, &user.Phone, &user.Password,
+		&user.Username, &user.Email, &user.Phone, &user.PhoneRegion, &user.Password,
 		&user.UniqueCode, &user.CreatedAt, &user.LoginType,
 	)
 
@@ -126,12 +146,12 @@ func GetUserByEmailDB(email string) (*models.User, error) {
 		return nil, nil
 	}
 
-	query := `SELECT username, email, phone, password, unique_code, created_at, login_type 
+	query := `SELECT username, email, phone, COALESCE(phone_region, ''), password, unique_code, created_at, login_type 
 			  FROM users WHERE email = ?`
 
 	var user models.User
 	err := db.QueryRow(query, email).Scan(
-		&user.Username, &user.Email, &user.Phone, &user.Password,
+		&user.Username, &user.Email, &user.Phone, &user.PhoneRegion, &user.Password,
 		&user.UniqueCode, &user.CreatedAt, &user.LoginType,
 	)
 
@@ -151,12 +171,12 @@ func GetUserByPhoneDB(phone string) (*models.User, error) {
 		return nil, nil
 	}
 
-	query := `SELECT username, email, phone, password, unique_code, created_at, login_type 
+	query := `SELECT username, email, phone, COALESCE(phone_region, ''), password, unique_code, created_at, login_type 
 			  FROM users WHERE phone = ?`
 
 	var user models.User
 	err := db.QueryRow(query, phone).Scan(
-		&user.Username, &user.Email, &user.Phone, &user.Password,
+		&user.Username, &user.Email, &user.Phone, &user.PhoneRegion, &user.Password,
 		&user.UniqueCode, &user.CreatedAt, &user.LoginType,
 	)
 
@@ -204,7 +224,7 @@ func PhoneExistsDB(phone string) (bool, error) {
 
 // GetAllUsersDB retrieves all users from the database
 func GetAllUsersDB() ([]*models.User, error) {
-	query := `SELECT username, email, phone, password, unique_code, created_at, login_type FROM users`
+	query := `SELECT username, email, phone, COALESCE(phone_region, ''), password, unique_code, created_at, login_type FROM users`
 
 	rows, err := db.Query(query)
 	if err != nil {
@@ -216,7 +236,7 @@ func GetAllUsersDB() ([]*models.User, error) {
 	for rows.Next() {
 		var user models.User
 		err := rows.Scan(
-			&user.Username, &user.Email, &user.Phone, &user.Password,
+			&user.Username, &user.Email, &user.Phone, &user.PhoneRegion, &user.Password,
 			&user.UniqueCode, &user.CreatedAt, &user.LoginType,
 		)
 		if err != nil {
