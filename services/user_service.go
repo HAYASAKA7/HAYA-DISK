@@ -29,14 +29,9 @@ func GetUserStoragePath(username, uniqueCode string) string {
 	return filepath.Join(config.StorageDir, fmt.Sprintf("%s_%s", username, uniqueCode))
 }
 
-// FindUserByCredential finds a user by username, email, or phone
+// FindUserByCredential finds a user by email or phone (username login is disabled)
 func FindUserByCredential(credential string) *models.User {
-	// Try username first
-	if user, _ := GetUserByUsernameDB(credential); user != nil {
-		return user
-	}
-
-	// Try email
+	// Try email first
 	if user, _ := GetUserByEmailDB(credential); user != nil {
 		return user
 	}

@@ -21,14 +21,14 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
-		credential := r.FormValue("credential") // Can be username, email, or phone
+		credential := r.FormValue("credential") // Can be email or phone
 		password := r.FormValue("password")
 
 		user := services.FindUserByCredential(credential)
 
 		if user == nil || user.Password != password {
 			tmpl, _ := template.ParseFiles(filepath.Join(config.TemplatesDir, "login.html"))
-			tmpl.Execute(w, map[string]string{"error": "Invalid credentials or password"})
+			tmpl.Execute(w, map[string]string{"error": "Invalid email/phone or password"})
 			return
 		}
 
