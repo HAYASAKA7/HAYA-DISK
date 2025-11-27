@@ -406,14 +406,14 @@ func getRecentFiles(basePath string) []models.RecentFile {
 	return recentFiles
 }
 
-// getRecentFilesFromDB retrieves the 5 most recently modified files from database
+// getRecentFilesFromDB retrieves the 5 most recently uploaded files from database
 func getRecentFilesFromDB(username string) []models.RecentFile {
 	var recentFiles []models.RecentFile
 
-	// Query to get recent files, ordered by modified_at DESC
-	query := `SELECT filename, storage_path, parent_path, file_size, modified_at 
+	// Query to get recent files, ordered by uploaded_at DESC
+	query := `SELECT filename, storage_path, parent_path, file_size, uploaded_at 
 			  FROM files WHERE username = ? AND is_directory = 0 
-			  ORDER BY modified_at DESC LIMIT 5`
+			  ORDER BY uploaded_at DESC LIMIT 5`
 
 	rows, err := services.GetDB().Query(query, username)
 	if err != nil {
@@ -424,9 +424,9 @@ func getRecentFilesFromDB(username string) []models.RecentFile {
 	for rows.Next() {
 		var filename, storagePath, parentPath string
 		var fileSize int64
-		var modifiedAt string
+		var uploadedAt string
 
-		rows.Scan(&filename, &storagePath, &parentPath, &fileSize, &modifiedAt)
+		rows.Scan(&filename, &storagePath, &parentPath, &fileSize, &uploadedAt)
 
 		ext := strings.ToLower(filepath.Ext(filename))
 		isImage := utils.IsImageFile(ext)
