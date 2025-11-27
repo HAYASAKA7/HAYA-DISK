@@ -155,6 +155,7 @@ HAYA-DISK/
 └── utils/
     ├── utils.go             # Utility functions
     └── migrate.go           # Migration utilities
+    └── validation.go        # Validation utilities
 ```
 
 ## 🔧 Configuration
@@ -643,3 +644,4 @@ If you have any questions or issues, please open an issue on the GitHub reposito
 ---
 
 Made with ❤️ by HAYASAKA7
+
