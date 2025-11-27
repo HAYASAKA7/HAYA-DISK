@@ -117,7 +117,8 @@ HAYA-DISK/
 │   └── migrate/
 │       └── main.go           # Migration tool for legacy data
 ├── config/
-│   └── constants.go          # Configuration constants
+│   ├── constants.go          # Configuration constants
+│   └── backup_config.go      # Backup configuration settings
 ├── handlers/
 │   ├── auth.go              # Authentication handlers
 │   ├── file_list.go         # File listing handlers
@@ -133,7 +134,11 @@ HAYA-DISK/
 │   ├── session_service.go   # Session service layer
 │   ├── user_service.go      # User service layer
 │   ├── file_lock_service.go # File operation locking
-│   └── cache_service.go     # Directory listing cache
+│   ├── cache_service.go     # Directory listing cache
+│   └── backup_service.go    # Auto-backup scheduler and operations
+├── backups/                 # Backup storage (auto-generated)
+│   ├── backup_YYYY-MM-DD_HHMMSS.zip
+│   └── backup_log.txt
 ├── storage/                 # User file storage (auto-generated)
 │   └── {username}_{hash}/
 │       ├── Audios/
@@ -169,6 +174,73 @@ To change the server port, modify the `ServerPort` constant in `config/constants
 
 ```go
 const ServerPort = ":8080" // Change to your desired port
+```
+
+## 💾 Auto-Backup
+
+HAYA-DISK includes an automatic backup system that protects your data by creating scheduled backups of both the database and user files.
+
+### Features
+
+- **Scheduled Backups**: Automatically runs at 3:00 AM (device time) daily
+- **Compressed Archives**: Backups are compressed to `.zip` format to save space
+- **Auto-Cleanup**: Old backups older than 7 days are automatically deleted
+- **Full Backup**: Includes both SQLite database and all user storage files
+- **Graceful Shutdown**: Backup scheduler stops properly when server shuts down
+
+### Backup Location
+
+Backups are stored in the `backups/` directory:
+
+```text
+backups/
+├── backup_2025-11-27_030000.zip    # Compressed backup
+├── backup_2025-11-26_030000.zip
+├── backup_2025-11-25_030000.zip
+└── backup_log.txt                   # Backup history log
+```
+
+### Backup Contents
+
+Each backup archive contains:
+- `haya-disk.db` - SQLite database with user accounts and file metadata
+- `storage/` - All user files and folders
+
+### Configuration
+
+Backup settings can be modified in `config/backup_config.go`:
+
+```go
+var DefaultBackupSettings = BackupSettings{
+    Enabled:        true,   // Enable/disable auto-backup
+    BackupDir:      "backups",
+    ScheduleHour:   3,      // Hour to run backup (0-23)
+    ScheduleMinute: 0,      // Minute to run backup (0-59)
+    RetentionDays:  7,      // Keep backups for X days
+    BackupDatabase: true,   // Backup the SQLite database
+    BackupStorage:  true,   // Backup the storage folder
+    CompressBackup: true,   // Compress backups to .zip
+}
+```
+
+### Restoring from Backup
+
+To restore from a backup:
+
+1. Stop the HAYA-DISK server
+2. Extract the backup zip file
+3. Replace `haya-disk.db` with the backed-up database
+4. Replace the `storage/` folder with the backed-up storage
+5. Restart the server
+
+```bash
+# Example restore commands (PowerShell)
+Stop-Process -Name "HAYA-DISK" -ErrorAction SilentlyContinue
+Expand-Archive -Path "backups/backup_2025-11-27_030000.zip" -DestinationPath "restore_temp"
+Copy-Item "restore_temp/haya-disk.db" -Destination "." -Force
+Copy-Item "restore_temp/storage" -Destination "." -Recurse -Force
+Remove-Item "restore_temp" -Recurse
+./HAYA-DISK.exe
 ```
 
 ## 🎯 Usage

@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/HAYASAKA7/HAYA-DISK/config"
 	"github.com/HAYASAKA7/HAYA-DISK/handlers"
@@ -49,6 +51,11 @@ func main() {
 	// Auto-migrate if users.json exists and database is empty
 	autoMigrate()
 
+	// Initialize and start backup scheduler
+	backupScheduler := services.InitBackupService()
+	backupScheduler.Start()
+	defer backupScheduler.Stop()
+
 	// Register HTTP handlers
 	http.HandleFunc("/", handlers.IndexHandler)
 	http.HandleFunc("/login", handlers.LoginHandler)
@@ -67,12 +74,22 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(config.TemplatesDir))))
 	http.Handle("/resources/", http.StripPrefix("/resources/", http.FileServer(http.Dir("resources"))))
 
-	// Start server
-	fmt.Printf("Server started and accessible at:\n")
-	fmt.Printf("  - Local: http://localhost:8080\n")
-	fmt.Printf("  - Network: http://<your-ip>:8080\n")
-	fmt.Printf("Listening on %s\n", config.ServerPort)
-	if err := http.ListenAndServe(config.ServerPort, nil); err != nil {
-		fmt.Println("Server error:", err)
-	}
+	// Setup graceful shutdown
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	// Start server in goroutine
+	go func() {
+		fmt.Printf("Server started and accessible at:\n")
+		fmt.Printf("  - Local: http://localhost:8080\n")
+		fmt.Printf("  - Network: http://<your-ip>:8080\n")
+		fmt.Printf("Listening on %s\n", config.ServerPort)
+		if err := http.ListenAndServe(config.ServerPort, nil); err != nil {
+			log.Printf("Server error: %v", err)
+		}
+	}()
+
+	// Wait for shutdown signal
+	<-stop
+	log.Println("Shutting down server...")
 }
