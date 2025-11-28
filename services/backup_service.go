@@ -62,6 +62,20 @@ func InitBackupServiceWithSettings(settings config.BackupSettings) *BackupSchedu
 		if err := os.MkdirAll(settings.BackupDir, os.ModePerm); err != nil {
 			log.Printf("Warning: Failed to create backup directory: %v", err)
 		}
+		// Set lastBackup from latest backup file
+		entries, err := os.ReadDir(settings.BackupDir)
+		if err == nil {
+			var latestTime time.Time
+			for _, entry := range entries {
+				if strings.HasPrefix(entry.Name(), "backup_") {
+					info, err := entry.Info()
+					if err == nil && info.ModTime().After(latestTime) {
+						latestTime = info.ModTime()
+					}
+				}
+			}
+			backupScheduler.lastBackup = latestTime
+		}
 	}
 
 	return backupScheduler
@@ -101,6 +115,24 @@ func (bs *BackupScheduler) Start() {
 				log.Printf("✗ Initial backup failed: %v", result.Error)
 			}
 		}()
+	} else {
+		// If scheduled time for today has passed and no backup was made for today, run backup immediately
+		now := time.Now()
+		scheduled := time.Date(now.Year(), now.Month(), now.Day(), bs.settings.ScheduleHour, bs.settings.ScheduleMinute, 0, 0, now.Location())
+		lastBackupDate := bs.lastBackup.Format("2006-01-02")
+		today := now.Format("2006-01-02")
+		if now.After(scheduled) && lastBackupDate != today {
+			log.Println("Missed scheduled backup for today. Running backup now...")
+			go func() {
+				result := bs.RunBackup()
+				if result.Success {
+					log.Printf("✓ Missed backup completed: %s (Size: %s)",
+						result.BackupPath, formatSize(result.TotalSize))
+				} else {
+					log.Printf("✗ Missed backup failed: %v", result.Error)
+				}
+			}()
+		}
 	}
 
 	bs.wg.Add(1)
@@ -145,28 +177,64 @@ func (bs *BackupScheduler) run() {
 	defer bs.wg.Done()
 
 	for {
-		duration := bs.settings.GetDurationUntilNextBackup()
-		log.Printf("Next backup scheduled in: %v", duration.Round(time.Minute))
+		// Check if scheduled time has passed and no backup was made for today
+		now := time.Now()
+		scheduled := time.Date(now.Year(), now.Month(), now.Day(), bs.settings.ScheduleHour, bs.settings.ScheduleMinute, 0, 0, now.Location())
+		// Only run missed backup if lastBackup is before today's scheduled time
+		if now.After(scheduled) && (bs.lastBackup.IsZero() || bs.lastBackup.Before(scheduled)) {
+			log.Println("Missed scheduled backup for today (while running). Running backup now...")
+			result := bs.RunBackup()
+			if result.Success {
+				log.Printf("✓ Missed backup completed: %s (Files: %d, Size: %s)",
+					result.BackupPath, result.FilesCount, formatSize(result.TotalSize))
+				bs.CleanOldBackups()
+			} else {
+				log.Printf("✗ Missed backup failed: %v", result.Error)
+			}
+		}
 
+		nextBackupTime := bs.settings.GetNextBackupTime()
+		duration := time.Until(nextBackupTime)
 		timer := time.NewTimer(duration)
+
+		// Live countdown goroutine (single line update)
+		stopCountdown := make(chan struct{})
+		go func() {
+			for {
+				select {
+				case <-stopCountdown:
+					// Print final scheduled time on exit
+					fmt.Printf("\rNext backup scheduled at: %s\n", nextBackupTime.Format("2006-01-02 15:04:05"))
+					return
+				default:
+					remaining := time.Until(nextBackupTime)
+					if remaining < 0 {
+						remaining = 0
+					}
+					hours := int(remaining.Hours())
+					minutes := int(remaining.Minutes()) % 60
+					seconds := int(remaining.Seconds()) % 60
+					fmt.Printf("\rNext backup in: %02dh:%02dm:%02ds (at %s)", hours, minutes, seconds, nextBackupTime.Format("2006-01-02 15:04:05"))
+					time.Sleep(1 * time.Second)
+				}
+			}
+		}()
 
 		select {
 		case <-bs.stopChan:
 			timer.Stop()
+			close(stopCountdown)
 			return
 		case <-timer.C:
+			close(stopCountdown)
 			log.Println("Starting scheduled backup...")
 			result := bs.RunBackup()
 			if result.Success {
 				log.Printf("✓ Backup completed successfully: %s (Files: %d, Size: %s)",
 					result.BackupPath, result.FilesCount, formatSize(result.TotalSize))
+				bs.CleanOldBackups()
 			} else {
 				log.Printf("✗ Backup failed: %v", result.Error)
-			}
-
-			// Clean old backups after successful backup
-			if result.Success {
-				bs.CleanOldBackups()
 			}
 		}
 	}
